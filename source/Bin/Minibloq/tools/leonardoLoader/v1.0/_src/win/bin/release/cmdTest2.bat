@@ -1,3 +1,0 @@
-leonardoLoader
-
-pause

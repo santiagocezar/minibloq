@@ -9,3 +9,7 @@ source/gmon.out
 Bin/Minibloq/work/_temp
 source/Bin/Minibloq/work/_temp
 source/Minibloq.Windows.32bits.v0.82.layout
+build
+.cache
+.direnv
+install/
