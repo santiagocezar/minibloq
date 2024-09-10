@@ -67,3 +67,5 @@ sources = files(
     'main.cpp',
     'HID/v0.10/hid_LINUX.cpp',
 )
+
+subdir('mubloq')

@@ -1,5 +1,6 @@
 #include "BubbleHardwareManager.h"
 #include "Bubble.h"
+#include "mubloq/hardware.hpp"
 
 #if defined (WIN32)
     #include <windows.h>
@@ -7,11 +8,7 @@
 
 #include "MainFrame.h"
 #include <wx/dir.h>
-
-
-//##Make the limit configurable, from an XML file (and see the Windows and Linux API documetation too
-//to avoid defining it smaller than possibly needed):
-const int maxPorts = 256;
+#include <fmt/core.h>
 
 
 WX_DEFINE_OBJARRAY(arrayOfBoardProperties);
@@ -24,21 +21,23 @@ END_EVENT_TABLE()
 
 BubbleHardwareManager::BubbleHardwareManager(   wxWindow* parent,
                                                 wxWindowID id,
+                                                lager::reader<hardware::model> hardware,
+                                                lager::context<hardware::actions> ctx,
                                                 Bubble *const bubble,
                                                 const wxString& boardName,
-                                                const wxColour& colour,
                                                 const wxPoint& pos,
                                                 const wxSize& size,
                                                 long style,
-                                                const wxString& name) : BubblePanel(parent,
-                                                                                    id,
-                                                                                    colour,
-                                                                                    true,
-                                                                                    pos,
-                                                                                    size,
-                                                                                    style,
-                                                                                    name
-                                                                                   ),
+                                                const wxString& name) : wxPanel(parent,
+                                                                                id,
+                                                                                pos,
+                                                                                size,
+                                                                                style,
+                                                                                name),
+                                                                        hardware(hardware),
+                                                                        ports(hardware[&hardware::model::available_ports]),
+                                                                        selected_port(hardware[&hardware::model::selected_port]),
+                                                                        ctx(ctx),
                                                                         parent(parent),
                                                                         bubble(bubble),
                                                                         boardName(boardName),
@@ -155,18 +154,10 @@ BubbleHardwareManager::BubbleHardwareManager(   wxWindow* parent,
                                         wxString("lblBootSerialPortName")
                                        );
 
-    comboBootPortName = new BubbleCombo(this,
+    comboBootPortName = new wxComboBox( this,
                                         wxNewId(),
-                                        wxImage(bubble->getThemePath() + wxString("/ComboSelectDefault.png")),
-                                        wxImage(bubble->getThemePath() + wxString("/ComboSelectPressed.png")),
-                                        wxImage(bubble->getThemePath() + wxString("/ComboSelectHover.png")),
-                                        wxImage(bubble->getThemePath() + wxString("/ComboSelectDisabled.png")),
-                                        false,
-                                        wxPoint(210, 25),   //##Un-hardcode!
-                                        wxSize(100, 16),    //##Un-hardcode!
-                                        wxBORDER_SUNKEN|
-                                        wxTRANSPARENT_WINDOW,
-                                        wxString("comboBootSerialPortName")
+                                        "",
+                                        wxPoint(210, 25)   //##Un-hardcode!
                                        );
     if (comboBootPortName)
     {
@@ -180,6 +171,20 @@ BubbleHardwareManager::BubbleHardwareManager(   wxWindow* parent,
                                     NULL,
                                     this
                                   );
+        
+        
+        ports.watch([&](decltype (hardware::model::available_ports) ports) {
+            comboBootPortName->Clear();
+            for (auto &port: ports) {
+                comboBootPortName->Append(port);
+            }
+        });
+        
+        selected_port.watch([&](int selected) {
+            fmt::println("selected: {}", selected);
+            comboBootPortName->SetSelection(selected);
+        });
+        
         updatePorts();
         setPortType();
 
@@ -302,17 +307,16 @@ BubbleHardwareManager::BubbleHardwareManager(   wxWindow* parent,
         }
     }
 
-    buttonMainImage = new BubbleButton( this,
-                                        wxNewId(),
-                                        wxPoint(0, 0),  //##Un-hardcode!
-                                        wxSize(32, 32)  //##Un-hardcode!
-                                      );
+    // buttonMainImage = new BubbleButton( this,
+    //                                     wxNewId(),
+    //                                     wxPoint(0, 0),  //##Un-hardcode!
+    //                                     wxSize(32, 32)  //##Un-hardcode!
+    //                                   );
     //##buttonIcon->SetValidator(wxDefaultValidator);
 
     changeImage();
 
     //SetBackgroundColour(colour);
-    SetBackgroundColourAndRefresh(colour);
 }
 
 
@@ -391,10 +395,10 @@ void BubbleHardwareManager::onButtonButtonReloadHardwareLeftUp(wxMouseEvent& eve
             if (comboBoardName && comboBootPortName)
             {
                 wxString selectedHardware = comboBoardName->getText();
-                wxString selectedPort = comboBootPortName->getText();
+                wxString selectedPort = comboBootPortName->GetValue();
                 bubble->loadHardwareTargets(this);
                 comboBoardName->setSelection(selectedHardware);
-                comboBootPortName->setSelection(selectedPort);
+                // comboBootPortName->setSelection(selectedPort);
             }
         }
     }
@@ -456,14 +460,14 @@ void BubbleHardwareManager::onButtonReloadBlocksLeftUp(wxMouseEvent& event)
 
 void BubbleHardwareManager::onSize(wxSizeEvent& event)
 {
-    fit(event.GetSize());
-    Update();
-    Refresh();
+    // fit(event.GetSize());
+    // Update();
+    // Refresh();
 //    if (comboBootPortName)
 //    {
 //        //comboBootPortName->Raise();
 //    }
-    event.Skip();
+    // event.Skip();
 }
 
 void BubbleHardwareManager::fit(const wxSize& size)
@@ -543,73 +547,7 @@ bool BubbleHardwareManager::serialPortExists(const wxString& strPort)
 
 void BubbleHardwareManager::updatePorts()
 {
-    if (comboBootPortName == NULL)
-        return;
-    comboBootPortName->clear();
-    ports.clear();
-
-#if defined (WIN32)
-    //Thanks to Alan Kharsansky for this code!:
-    for (int portNumber = 1; portNumber < maxPorts; ++portNumber)
-    {
-        wxString strCommRealName = wxString("//./COM");
-        wxString strCommScreenReal = wxString("COM");
-        strCommRealName << portNumber;
-        strCommScreenReal << portNumber;
-        if (serialPortExists(strCommRealName))
-        {
-            comboBootPortName->append(strCommScreenReal);
-            ports.push_back(std::string(strCommRealName.mb_str()));
-        }
-    }
-#else
-    //Thanks to Juan Pizarro for this code!:
-    if( ctb::GetAvailablePorts(ports) )
-    {
-        for(int i=0; i < ports.size(); i++)
-        {
-            comboBootPortName->append(ports[i]);
-        }
-    }
-#endif
-}
-
-
-bool BubbleHardwareManager::getAvailablePorts(std::vector<std::string>& result)
-{
-#if defined (WIN32)
-    //Thanks to Alan Kharsansky for this code!:
-    for (int portNumber = 1; portNumber < maxPorts; ++portNumber)
-    {
-        wxString strCommRealName = wxString("//./COM");
-        wxString strCommScreenReal = wxString("COM");
-        strCommRealName << portNumber;
-        strCommScreenReal << portNumber;
-        if (serialPortExists(strCommRealName))
-        {
-            result.push_back(std::string(strCommScreenReal.mb_str()));
-        }
-    }
-    return true;
-#else
-    //Thanks to Juan Pizarro for this code!:
-    return ctb::GetAvailablePorts(result);
-#endif
-}
-
-
-bool BubbleHardwareManager::findNewPort()
-{
-    //##Future: code this:
-
-    newPort = wxString("");
-    return false;
-}
-
-
-wxString BubbleHardwareManager::getNewPort()
-{
-    return newPort;
+    ctx.dispatch(hardware::reload_ports {});
 }
 
 
@@ -662,15 +600,16 @@ bool BubbleHardwareManager::getPortSelectorEnabled()
 wxString BubbleHardwareManager::getPortNameString()
 {
     if (comboBootPortName)
-        return comboBootPortName->getText();
+        return comboBootPortName->GetValue();
     return emptyDummyString;
 }
 
 
 void BubbleHardwareManager::setPortNameString(const wxString& value)
 {
+    fmt::println("setPortNameString({})", value.utf8_string());
     if (comboBootPortName)
-        comboBootPortName->setText(value);
+       comboBootPortName->SetValue(value);
 }
 
 
@@ -691,15 +630,16 @@ wxString BubbleHardwareManager::getBoardSelection()
 
 void BubbleHardwareManager::setPortSelection(const wxString& value)
 {
+    fmt::println("setPortSelection({})", value.utf8_string());
     if (comboBootPortName)
-        comboBootPortName->setSelection(value);
+        comboBootPortName->SetValue(value);
 }
 
 
 wxString BubbleHardwareManager::getPortSelection()
 {
     if (comboBootPortName)
-        return comboBootPortName->getText();
+        return comboBootPortName->GetValue();
     return wxEmptyString;
 }
 
@@ -709,8 +649,8 @@ void BubbleHardwareManager::popUpPortList()
     if (IsShownOnScreen())
     {
         updatePorts();
-        if (comboBootPortName)
-            comboBootPortName->popUpList();
+        // if (comboBootPortName)
+            // FIXME: comboBootPortName->popUpList();
     }
 }
 
@@ -739,17 +679,17 @@ void BubbleHardwareManager::setPortType()
         if (bubble)
         {
             //##In the future this will be more flexible, allowing for TCP communications, among other:
-            if (comboBootPortName->getText() == wxString("HID"))
+            if (comboBootPortName->GetValue() == wxString("HID"))
             {
                 bubble->setBootPortName(wxString("HID"));
             }
-            else if (comboBootPortName->getText() == wxString("HID2"))
+            else if (comboBootPortName->GetValue() == wxString("HID2"))
             {
                 bubble->setBootPortName(wxString("HID2"));
             }
             else
             {
-                wxString strCommRealName = wxString("//./") + comboBootPortName->getText();
+                wxString strCommRealName = wxString("//./") + comboBootPortName->GetValue();
                 bubble->setBootPortName(strCommRealName);
             }
         }
@@ -759,6 +699,11 @@ void BubbleHardwareManager::setPortType()
 
 void BubbleHardwareManager::onComboBootPortNameChanged(wxCommandEvent &event)
 {
+    int idx = comboBootPortName->GetSelection();
+    assert(wxNOT_FOUND == -1); // just in case that changes...
+    fmt::println("combo changed to {}", idx);
+    ctx.dispatch(hardware::select_port { idx });
+    
     setPortType();
 }
 
@@ -804,21 +749,14 @@ void BubbleHardwareManager::onComboBoardNameChanged(wxCommandEvent &event)
                 {
                     if (comboBootPortName)
                     {
-                        wxString selectedPort = comboBootPortName->getText();
+                        wxString selectedPort = comboBootPortName->GetValue();
                         setPortSelectorEnabled(true);
                         updatePorts();
-                        if ( (comboBootPortName->getText() == wxString("HID")) || //##Unhardcode
-                             (comboBootPortName->getText() == wxString("HID2"))
+                        if ( (comboBootPortName->GetValue() == wxString("HID")) || //##Unhardcode
+                             (comboBootPortName->GetValue() == wxString("HID2"))
                            )
                         {
                             setPortNameString(wxString(""));
-                        }
-                        else
-                        {
-                            if (comboBootPortName->textExists(selectedPort))
-                                comboBootPortName->setSelection(selectedPort);
-                            else
-                                setPortNameString(wxString(""));
                         }
                     }
                 }

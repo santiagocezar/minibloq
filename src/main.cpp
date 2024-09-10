@@ -6,6 +6,9 @@
 #include <wx/app.h>
 #include <wx/stdpaths.h>
 #include "MainFrame.h"
+#include "mubloq/model.hpp"
+#include <lager/store.hpp>
+#include <lager/event_loop/manual.hpp>
 
 
 //////////////////////////////////////////////////////////////////////
@@ -21,6 +24,8 @@ class Minibloq : public wxApp
         bool maximized;
         bool centered;
         wxString strBoard;
+
+        lager::store<mubloq::actions, mubloq::model> store;
 
         void readConfig()
         {
@@ -113,10 +118,14 @@ class Minibloq : public wxApp
         wxLocale locale;
 
 	public:
-		//##Constructor? It seems that right now the compiler uses the default constructor.
+        Minibloq() :
+            store(lager::make_store<mubloq::actions>(mubloq::model {}, lager::with_manual_event_loop{}))
+            {}
 
         bool OnInit()
         {
+            wxApp::GTKSuppressDiagnostics();
+            
             //i18n/l10n:
             //20120603: Change suggested by Juan Pizarro to solve the i18n bug in some Windows and Linux machines:
             //if ( !locale.Init(wxLANGUAGE_DEFAULT, wxLOCALE_CONV_ENCODING) )
@@ -174,6 +183,7 @@ class Minibloq : public wxApp
             }
             frame = new MainFrame(  NULL,
                                     wxID_ANY,
+                                    store,
                                     locale,
                                     lanPath,
                                     initialCatalogName,

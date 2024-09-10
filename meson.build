@@ -1,9 +1,13 @@
 project('minibloq', 'cpp',
   version : '0.1',
-  default_options : ['warning_level=0', 'cpp_std=c++14'])
+  default_options : ['warning_level=0', 'cpp_std=c++17'])
 
 wx = dependency('wxwidgets', modules : ['all'])
 usb = dependency('libusb')
+lager = dependency('Lager')
+immer = dependency('Immer')
+zug = dependency('Zug')
+fmt = dependency('fmt')
 
 subdir('src')
 
@@ -26,4 +30,4 @@ executable('minibloq',
            sources,
            install : true,
            include_directories : [include, res],
-           dependencies : [wx, usb])
+           dependencies : [wx, usb, lager, immer, zug, fmt])

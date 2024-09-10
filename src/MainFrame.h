@@ -22,6 +22,8 @@
 #include "ComponentProperties.h"
 #include "TerminalProperties.h"
 
+#include "mubloq/model.hpp"
+#include <lager/store.hpp>
 
 //////////////////////////////////////////////////////////////////////
 // MainFrame
@@ -180,6 +182,8 @@ class MainFrame : public wxFrame, public IBubbleNotifier
         wxAuiToolBar*   toolComponent;
         wxAuiToolBar*   toolView;
 */
+        lager::store<mubloq::actions, mubloq::model> &store;
+
         wxAuiManager auiManager;
         long m_notebook_style;
         //long m_notebook_theme;
@@ -489,6 +493,7 @@ class MainFrame : public wxFrame, public IBubbleNotifier
     public:
         MainFrame(  wxWindow* parent,
                     wxWindowID id,
+                    lager::store<mubloq::actions, mubloq::model> &store,
                     wxLocale& locale,
                     const wxString& languagePath,
                     const wxString& initialCatalogName,

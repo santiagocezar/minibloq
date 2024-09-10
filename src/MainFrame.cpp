@@ -1,6 +1,9 @@
 #include "MainFrame.h"
 #include "Minibloq.xpm"
+#include "mubloq/hardware.hpp"
+#include "mubloq/model.hpp"
 
+#include <lager/reader.hpp>
 #include <wx/menu.h>
 #include <wx/aui/aui.h>
 #include <wx/stdpaths.h>
@@ -130,6 +133,7 @@ END_EVENT_TABLE()
 
 MainFrame::MainFrame(   wxWindow* parent,
                         wxWindowID id,
+                        lager::store<mubloq::actions, mubloq::model> &store,
                         wxLocale& locale,
                         const wxString& languagePath,
                         const wxString& initialCatalogName,
@@ -139,6 +143,7 @@ MainFrame::MainFrame(   wxWindow* parent,
                         const wxSize& size,
                         long style):
                                         wxFrame(parent, id, title, pos, size, style),
+                                        store(store),
                                         showCodeAtStart(false),
                                         centered(true),
                                         boardName(boardName),
@@ -589,8 +594,9 @@ void MainFrame::readConfig()
                 }
                 else */if (child->GetName() == "port")
                 {
-                    if (bubble.getHardwareManager())
-                        bubble.getHardwareManager()->setPortSelection(child->GetNodeContent());
+                    // TODO: load settings from model
+                    // if (bubble.getHardwareManager())
+                    // bubble.getHardwareManager()->setPortSelection(child->GetNodeContent());
                 }
                 child = child->GetNext();
             }
@@ -2333,7 +2339,10 @@ void MainFrame::createHardwareManager()
 
 //    wxMessageDialog dialog0(this, getBoardName(), _("board")); //##Debug
 //    dialog0.ShowModal(); //##Debug
-    hardware = new BubbleHardwareManager(this, ID_Hardware, &bubble, getBoardName(), wxColour(255, 255, 255));
+    lager::reader<hardware::model> hardwareModel = store[&mubloq::model::hardware];
+    auto ctx = lager::context<hardware::actions>(store);
+    
+    hardware = new BubbleHardwareManager(this, ID_Hardware, hardwareModel, ctx, &bubble, getBoardName());
     if (hardware)
     {
         auiManager.AddPane( hardware, wxAuiPaneInfo()
@@ -2341,7 +2350,9 @@ void MainFrame::createHardwareManager()
                             //.Float().Layer(1).Position(1)
                             //.Float()
                             .Left().Layer(1).Position(0)
-                            .CloseButton(true).Hide()
+                            .Dockable(false)
+                            .CloseButton(false)
+                            .CaptionVisible(false)
                             .BestSize(wxSize(300, 350))
                             .MinSize(wxSize(340, 275))
                           );

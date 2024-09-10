@@ -13,3 +13,4 @@ build
 .cache
 .direnv
 install/
+.vscode

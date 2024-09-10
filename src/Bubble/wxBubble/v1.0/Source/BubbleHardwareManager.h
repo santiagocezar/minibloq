@@ -9,6 +9,10 @@
 #include <vector>
 #include "include/portscan.h"
 
+#include "mubloq/hardware.hpp"
+
+#include <lager/cursor.hpp>
+#include <lager/context.hpp>
 #include <wx/combobox.h>
 #include <wx/stattext.h>
 #include <wx/button.h>
@@ -21,7 +25,7 @@ WX_DECLARE_OBJARRAY(BubbleBoardProperties, arrayOfBoardProperties);
 
 class Bubble;
 class BubbleBoardProperties;
-class BubbleHardwareManager : public BubblePanel
+class BubbleHardwareManager : public wxPanel
 {
     private:
         wxWindow* parent;
@@ -29,7 +33,7 @@ class BubbleHardwareManager : public BubblePanel
         wxString boardName;
         BubbleBoardProperties *currentBoardProperties;
         wxStaticText *lblBootPortName;
-        BubbleCombo *comboBootPortName;
+        wxComboBox *comboBootPortName;
         wxStaticText *lblBoardName;
         BubbleCombo *comboBoardName;
         wxButton *buttonReloadBlocks;
@@ -44,8 +48,11 @@ class BubbleHardwareManager : public BubblePanel
 
         arrayOfBoardProperties boardsProperties;
 
-        std::vector<std::string> ports;
-        wxString newPort;
+        lager::reader<hardware::model> hardware;
+        lager::reader<decltype (hardware::model::available_ports)> ports;
+        lager::reader<int> selected_port;
+        
+        lager::context<hardware::actions> ctx;
 
         //##Add private copy constructor to avoid accidental copy?
 
@@ -67,9 +74,10 @@ class BubbleHardwareManager : public BubblePanel
     public:
         BubbleHardwareManager(  wxWindow* parent,
                                 wxWindowID id,
+                                lager::reader<hardware::model> hardware,
+                                lager::context<hardware::actions> ctx,
                                 Bubble *const bubble,
                                 const wxString& boardName,
-                                const wxColour& colour,
                                 const wxPoint& pos = wxDefaultPosition,
                                 const wxSize& size = wxDefaultSize,
                                 long style = wxTAB_TRAVERSAL,
@@ -92,10 +100,6 @@ class BubbleHardwareManager : public BubblePanel
 
         static bool serialPortExists(const wxString& strPort);
         void updatePorts();
-        bool getAvailablePorts(std::vector<std::string>& result);
-        bool findNewPort();
-        wxString getNewPort();
-        //##void getPorts(std::vector<std::string>& result);
 
         void setAllEnabled(bool value);
         void showDeveloperButtons(bool value);
