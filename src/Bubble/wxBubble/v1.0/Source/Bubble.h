@@ -101,7 +101,7 @@ class IBubbleNotifier
 class Bubble;
 class BubbleBoardProperties
 {
-    private:
+    public:
         wxString name;
         wxString path;
         wxString imgMain;
@@ -188,475 +188,57 @@ class BubbleBoardProperties
         wxString codeKeywords0;
         wxString codeKeywords1;
 
-    public:
-        BubbleBoardProperties():    name(wxString("")),
-                                    path(wxString("")),
-                                    imgMain(wxString("")),
-                                    cpu(wxString("")),
-                                    clockFreq(wxString("")),
-                                    url0(wxString("")),
-                                    url1(wxString("")),
-                                    imgThumb(wxString("")),
-                                    portType(wxString("serial")),
-                                    lang(wxString("")),
-                                    uploader(wxString("")),
-                                    uploaderCmd0(wxString("")),
-                                    corePath(wxString("")),
-                                    driverPath(wxString("")),
-                                    core(wxString("")),
-                                    outputMainFileExtension(wxString("ino")), //##Arduino compatible file by default?
-                                    resetBeforeBuild(false),
+        BubbleBoardProperties():    portType("serial"),
+                                    outputMainFileExtension("ino"), //##Arduino compatible file by default?
                                     bootBaudRate(115200),
                                     bootFindPortTries(5),
                                     bootTimeOut(200),
-                                    useWrapper(false),
-                                    headerFileExtension(wxString("")),
-                                    codeFileExtension(wxString("")),
-                                    includeCodePrefix(wxString("")),
-                                    includeCodePostfix(wxString("")),
-                                    includeCodeInstancePrefix(wxString("")),
-                                    includeInitCode(wxString("")),
-                                    includeFinalCode(wxString("")),
-                                    includeBuildPrefix(wxString("")),
-                                    includeBuildPostfix(wxString("")),
-                                    initBoardHeader(wxString("")),
-                                    initBoardPrefix(wxString("")),
-                                    initBoardPostfix(wxString("")),
-                                    commentBegin(wxString("")),
-                                    commentEnd(wxString("")),
-                                    includesCodeList(wxString("")),
-                                    definesCodeList(wxString("")),
-                                    instancesCodeList(wxString("")),
-                                    instancesHeaderCodeList(wxString("")),
-                                    initCode(wxString("")),
-                                    finalCode(wxString("")),
-                                    initBoardCode(wxString("")),
-                                    includesBuildList(wxString("")),
-                                    arduinoVersion(wxString("")),
-                                    objectExtension(wxString("")),
-                                    boardDefine(wxString("")),
-                                    arduinoVariant(wxString("")),
-                                    usbVid(wxString("")),
-                                    usbPidBoot(wxString("")),
-                                    usbPidApp(wxString("")),
-                                    usbManufacturer(wxString("")),
-                                    usbProduct(wxString("")),
-
                                     codeLexer(3), //CPP syntax
-                                    codeOperatorColor(wxColour(0, 0, 0)),
-                                    codeStringColor(wxColour(0, 0, 0)),
-                                    codePreprocessorColor(wxColour(0, 0, 0)),
-                                    codeIdentifierColor(wxColour(0, 0, 0)),
-                                    codeNumberColor(wxColour(0, 0, 0)),
-                                    codeCharacterColor(wxColour(0, 0, 0)),
-                                    codeWordColor(wxColour(0, 0, 0)),
-                                    codeWord2Color(wxColour(0, 0, 0)),
-                                    codeCommentColor(wxColour(0, 0, 0)),
-                                    codeCommentLineColor(wxColour(0, 0, 0)),
-                                    codeCommentDocColor(wxColour(0, 0, 0)),
-                                    codeCommentDocKeywordColor(wxColour(0, 0, 0)),
-                                    codeCommentDocKeywordErrorColor(wxColour(0, 0, 0)),
-                                    codeOperatorBold(false),
-                                    codeStringBold(false),
-                                    codePreprocessorBold(false),
-                                    codeIdentifierBold(false),
-                                    codeNumberBold(false),
-                                    codeCharacterBold(false),
-                                    codeWordBold(false),
-                                    codeWord2Bold(false),
-                                    codeCommentBold(false),
-                                    codeCommentLineBold(false),
-                                    codeCommentDocBold(false),
-                                    codeCommentDocKeywordBold(false),
-                                    codeCommentDocKeywordErrorBold(false),
-                                    codeTabWidth(4),
-                                    codeKeywords0(wxString("")),
-                                    codeKeywords1(wxString(""))
-        {
-            relCommands.Clear(); //Not necessary, but just in case.
-            fileExtensions.Clear();
-        }
+                                    codeTabWidth(4)
+        {}
         //##Ver si se necesita constructor de copia por las dudas, al menos que no haga gran cosa...
 
         virtual ~BubbleBoardProperties()
         {
         }
 
-        void set(BubbleBoardProperties *boardProperties)
+        // inline void clearRelCommands() { return relCommands.Clear(); };
+        // inline unsigned int getRelCommandsCount() const { return relCommands.GetCount(); };
+        // inline void addRelCommand(const wxString& value)
+        // {
+        //     relCommands.Add(value);
+        // }
+        // inline const wxString getRelCommand(const unsigned int index) const
+        // {
+        //     if (index < relCommands.GetCount())
+        //         return relCommands[index];
+        //     return wxString("");
+        // }
+
+        // inline void clearFileExtensions() { return fileExtensions.Clear(); };
+        // inline unsigned int getFileExtensionsCount() const { return fileExtensions.GetCount(); };
+        // inline void addFileExtension(const wxString& value)
+        // {
+        //     fileExtensions.Add(value);
+        // }
+        // inline const wxString getFileExtension(const unsigned int index) const
+        // {
+        //     if (index < fileExtensions.GetCount())
+        //         return fileExtensions[index];
+        //     return wxString("");
+        // }
+
+        // inline void setCodeOperatorColor(const wxString& value) { codeOperatorColor = string2color(value); }
+        // inline void setCodeOperatorColor(const wxColour& value) { codeOperatorColor = value; }
+
+        inline void addCodeKeyWord(wxString& keywords, const wxString& value)
         {
-            if (boardProperties)
-            {
-                setName(boardProperties->getName());
-                setPath(boardProperties->getPath());
-                setPortType(boardProperties->getPortType());
-                setImgMain(boardProperties->getImgMain());
-                setCpu(boardProperties->getCpu());
-                setClockFreq(boardProperties->getClockFreq());
-                setUrl0(boardProperties->getUrl0());
-                setUrl1(boardProperties->getUrl1());
-                setImgThumb(boardProperties->getImgThumb());
-                setLang(boardProperties->getLang());
-                setUploader(boardProperties->getUploader());
-                setUploaderCmd0(boardProperties->getUploaderCmd0());
-                setCorePath(boardProperties->getCorePath());
-                setDriverPath(boardProperties->getDriverPath());
-                setCore(boardProperties->getCore());
-                setOutputMainFileExtension(boardProperties->getOutputMainFileExtension());
-                setResetBeforeBuild(boardProperties->getResetBeforeBuild());
-                setBootBaudRate(boardProperties->getBootBaudRate());
-                setBootFindPortTries(boardProperties->getBootFindPortTries());
-                setBootTimeOut(boardProperties->getBootTimeOut());
-                setUseWrapper(boardProperties->getUseWrapper());
-                setHeaderFileExtension(boardProperties->getHeaderFileExtension()),
-                setCodeFileExtension(boardProperties->getCodeFileExtension()),
-                setIncludeCodePrefix(boardProperties->getIncludeCodePrefix());
-                setIncludeCodePostfix(boardProperties->getIncludeCodePostfix());
-                setIncludeCodeInstancePrefix(boardProperties->getIncludeCodeInstancePrefix());
-                setIncludeInitCode(boardProperties->getIncludeInitCode());
-                setIncludeFinalCode(boardProperties->getIncludeFinalCode());
-                setIncludeBuildPrefix(boardProperties->getIncludeBuildPrefix());
-                setIncludeBuildPostfix(boardProperties->getIncludeBuildPostfix());
-                setInitBoardHeader(boardProperties->getInitBoardHeader());
-                setInitBoardPrefix(boardProperties->getInitBoardPrefix());
-                setInitBoardPostfix(boardProperties->getInitBoardPostfix());
-                setCommentBegin(boardProperties->getCommentBegin());
-                setCommentEnd(boardProperties->getCommentEnd());
-                setIncludesCodeList(boardProperties->getIncludesCodeList());
-                setDefinesCodeList(boardProperties->getDefinesCodeList());
-                setInstancesCodeList(boardProperties->getInstancesCodeList());
-                setInstancesHeaderCodeList(boardProperties->getInstancesHeaderCodeList());
-                setInitCode(boardProperties->getInitCode()),
-                setFinalCode(boardProperties->getFinalCode()),
-                setInitBoardCode(boardProperties->getInitBoardCode()),
-                setIncludesBuildList(boardProperties->getIncludesBuildList());
-                setArduinoVersion(boardProperties->getArduinoVersion());
-                setObjectExtension(boardProperties->getObjectExtension());
-                setBoardDefine(boardProperties->getBoardDefine());
-                setArduinoVariant(boardProperties->getArduinoVariant());
-                setUsbVid(boardProperties->getUsbVid());
-                setUsbPidBoot(boardProperties->getUsbPidBoot());
-                setUsbPidApp(boardProperties->getUsbPidApp());
-                setUsbManufacturer(boardProperties->getUsbManufacturer());
-                setUsbProduct(boardProperties->getUsbProduct());
-
-                setCodeLexer(boardProperties->getCodeLexer());
-
-                setCodeOperatorColor(boardProperties->getCodeOperatorColor());
-                setCodeStringColor(boardProperties->getCodeStringColor());
-                setCodePreprocessorColor(boardProperties->getCodePreprocessorColor());
-                setCodeIdentifierColor(boardProperties->getCodeIdentifierColor());
-                setCodeNumberColor(boardProperties->getCodeNumberColor());
-                setCodeCharacterColor(boardProperties->getCodeCharacterColor());
-                setCodeWordColor(boardProperties->getCodeWordColor());
-                setCodeWord2Color(boardProperties->getCodeWord2Color());
-                setCodeCommentColor(boardProperties->getCodeCommentColor());
-                setCodeCommentLineColor(boardProperties->getCodeCommentLineColor());
-                setCodeCommentDocColor(boardProperties->getCodeCommentDocColor());
-                setCodeCommentDocKeywordColor(boardProperties->getCodeCommentDocKeywordColor());
-                setCodeCommentDocKeywordErrorColor(boardProperties->getCodeCommentDocKeywordErrorColor());
-
-                setCodeOperatorBold(boardProperties->getCodeOperatorBold());
-                setCodeStringBold(boardProperties->getCodeStringBold());
-                setCodePreprocessorBold(boardProperties->getCodePreprocessorBold());
-                setCodeIdentifierBold(boardProperties->getCodeIdentifierBold());
-                setCodeNumberBold(boardProperties->getCodeNumberBold());
-                setCodeCharacterBold(boardProperties->getCodeCharacterBold());
-                setCodeWordBold(boardProperties->getCodeWordBold());
-                setCodeWord2Bold(boardProperties->getCodeWord2Bold());
-                setCodeCommentBold(boardProperties->getCodeCommentBold());
-                setCodeCommentLineBold(boardProperties->getCodeCommentLineBold());
-                setCodeCommentDocBold(boardProperties->getCodeCommentDocBold());
-                setCodeCommentDocKeywordBold(boardProperties->getCodeCommentDocKeywordBold());
-                setCodeCommentDocKeywordErrorBold(boardProperties->getCodeCommentDocKeywordErrorBold());
-
-                setCodeTabWidth(boardProperties->getCodeTabWidth());
-
-                setCodeKeywords0(boardProperties->getCodeKeywords0());
-                setCodeKeywords1(boardProperties->getCodeKeywords1());
-
-                //relCommands = *(boardProperties->getRelCommands());
-                unsigned int i = 0;
-                while (i < boardProperties->getRelCommandsCount())
-                {
-                    relCommands.Add(boardProperties->getRelCommand(i));
-                    i++;
-                }
-
-                i = 0;
-                fileExtensions.Clear();
-                while (i < boardProperties->getFileExtensionsCount())
-                {
-                    fileExtensions.Add(boardProperties->getFileExtension(i));
-                    i++;
-                }
-            }
+            if (!keywords.Contains(value))
+                keywords += wxString(" ") + value;
         }
 
-        inline void setName(const wxString& value) { name = value; }
-        inline const wxString &getName() const { return name; }
-
-        inline void setPath(const wxString& value) { path = value; }
-        inline const wxString &getPath() const { return path; }
-
-        inline void setImgMain(const wxString& value) { imgMain = value; }
-        inline const wxString &getImgMain() const { return imgMain; }
-
-        inline void setCpu(const wxString& value) { cpu = value; }
-        inline const wxString &getCpu() const { return cpu; }
-
-        inline void setClockFreq(const wxString& value) { clockFreq = value; }
-        inline const wxString &getClockFreq() const { return clockFreq; }
-
-        inline void setUrl0(const wxString& value) { url0 = value; }
-        inline const wxString &getUrl0() const { return url0; }
-
-        inline void setUrl1(const wxString& value) { url1 = value; }
-        inline const wxString &getUrl1() const { return url1; }
-
-        inline void setImgThumb(const wxString& value) { imgThumb = value; }
-        inline const wxString &getImgThumb() const { return imgThumb; }
-
-        inline void setPortType(const wxString& value) { portType = value; }
-        inline const wxString &getPortType() const { return portType; }
-
-        inline void setLang(const wxString& value) { lang = value; }
-        inline const wxString &getLang() const { return lang; }
-
-        inline void setUploader(const wxString& value) { uploader = value; }
-        inline const wxString &getUploader() const { return uploader; }
-
-        inline void setUploaderCmd0(const wxString& value) { uploaderCmd0 = value; }
-        inline const wxString &getUploaderCmd0() const { return uploaderCmd0; }
-
-        inline void setCorePath(const wxString& value) { corePath = value; }
-        inline const wxString &getCorePath() const { return corePath; }
-
-        inline void setDriverPath(const wxString& value) { driverPath = value; }
-        inline const wxString &getDriverPath() const { return driverPath; }
-
-        inline void setCore(const wxString& value) { core = value; }
-        inline const wxString &getCore() const { return core; }
-
-        inline void setOutputMainFileExtension(const wxString& value) { outputMainFileExtension = value; }
-        inline const wxString &getOutputMainFileExtension() const { return outputMainFileExtension; }
-
-        inline void setResetBeforeBuild(const bool value) { resetBeforeBuild = value; }
-        inline const bool getResetBeforeBuild() const { return resetBeforeBuild; }
-
-        inline void setBootBaudRate(const unsigned int value) { bootBaudRate = value; }
-        inline const unsigned int getBootBaudRate() const { return bootBaudRate; }
-
-        inline void setBootFindPortTries(const unsigned int value) { bootFindPortTries = value; }
-        inline const unsigned int getBootFindPortTries() const { return bootFindPortTries; }
-
-        inline void setBootTimeOut(const unsigned int value) { bootTimeOut = value; }
-        inline const unsigned int getBootTimeOut() const { return bootTimeOut; }
-
-        inline void setUseWrapper(const bool value) { useWrapper = value; }
-        inline const bool getUseWrapper() const { return useWrapper; }
-
-        inline void setHeaderFileExtension(const wxString& value) { headerFileExtension = value; }
-        inline const wxString & getHeaderFileExtension() const { return headerFileExtension; }
-
-        inline void setCodeFileExtension(const wxString& value) { codeFileExtension = value; }
-        inline const wxString & getCodeFileExtension() const { return codeFileExtension; }
-
-        inline void setIncludeCodePrefix(const wxString& value) { includeCodePrefix = value; }
-        inline const wxString &getIncludeCodePrefix() const { return includeCodePrefix; }
-
-        inline void setIncludeCodePostfix(const wxString& value) { includeCodePostfix = value; }
-        inline const wxString &getIncludeCodePostfix() const { return includeCodePostfix; }
-
-        inline void setIncludeCodeInstancePrefix(const wxString& value) { includeCodeInstancePrefix = value; }
-        inline const wxString &getIncludeCodeInstancePrefix() const { return includeCodeInstancePrefix; }
-
-        inline void setIncludeInitCode(const wxString& value) { includeInitCode = value; }
-        inline const wxString &getIncludeInitCode() const { return includeInitCode; }
-
-        inline void setIncludeFinalCode(const wxString& value) { includeFinalCode = value; }
-        inline const wxString &getIncludeFinalCode() const { return includeFinalCode; }
-
-        inline void setIncludeBuildPrefix(const wxString& value) { includeBuildPrefix = value; }
-        inline const wxString &getIncludeBuildPrefix() const { return includeBuildPrefix; }
-
-        inline void setIncludeBuildPostfix(const wxString& value) { includeBuildPostfix = value; }
-        inline const wxString &getIncludeBuildPostfix() const { return includeBuildPostfix; }
-
-        inline void setInitBoardHeader(const wxString& value) { initBoardHeader = value; }
-        inline const wxString &getInitBoardHeader() const { return initBoardHeader; }
-
-        inline void setInitBoardPrefix(const wxString& value) { initBoardPrefix = value; }
-        inline const wxString &getInitBoardPrefix() const { return initBoardPrefix; }
-
-        inline void setInitBoardPostfix(const wxString& value) { initBoardPostfix = value; }
-        inline const wxString &getInitBoardPostfix() const { return initBoardPostfix; }
-
-        inline void setCommentBegin(const wxString& value) { commentBegin = value; }
-        inline const wxString &getCommentBegin() const { return commentBegin; }
-
-        inline void setCommentEnd(const wxString& value) { commentEnd = value; }
-        inline const wxString &getCommentEnd() const { return commentEnd; }
-
-        inline void setIncludesCodeList(const wxString &value) { includesCodeList = value; }
-        inline wxString getIncludesCodeList() const { return includesCodeList; }
-
-        inline void setDefinesCodeList(const wxString &value) { definesCodeList = value; }
-        inline wxString getDefinesCodeList() const { return definesCodeList; }
-
-        inline void setInstancesCodeList(const wxString &value) { instancesCodeList = value; }
-        inline wxString getInstancesCodeList() const { return instancesCodeList; }
-
-        inline void setInstancesHeaderCodeList(const wxString &value) { instancesHeaderCodeList = value; }
-        inline wxString getInstancesHeaderCodeList() const { return instancesHeaderCodeList; }
-
-        inline void setInitCode(const wxString &value) { initCode = value; }
-        inline wxString getInitCode() const { return initCode; }
-
-        inline void setFinalCode(const wxString &value) { finalCode = value; }
-        inline wxString getFinalCode() const { return finalCode; }
-
-        inline void setInitBoardCode(const wxString &value) { initBoardCode = value; }
-        inline wxString getInitBoardCode() const { return initBoardCode; }
-
-        inline void setIncludesBuildList(const wxString &value) { includesBuildList = value; }
-        inline wxString getIncludesBuildList() const { return includesBuildList; }
-
-        inline void setArduinoVersion(const wxString& value) { arduinoVersion = value; }
-        inline const wxString &getArduinoVersion() const { return arduinoVersion; }
-
-        inline void setObjectExtension(const wxString& value) { objectExtension = value; }
-        inline const wxString &getObjectExtension() const { return objectExtension; }
-
-        inline void setBoardDefine(const wxString& value) { boardDefine = value; }
-        inline const wxString &getBoardDefine() const { return boardDefine; }
-
-        inline void setArduinoVariant(const wxString& value) { arduinoVariant = value; }
-        inline const wxString &getArduinoVariant() const { return arduinoVariant; }
-
-        inline void setUsbVid(const wxString& value) { usbVid = value; }
-        inline const wxString &getUsbVid() const { return usbVid; }
-
-        inline void setUsbPidBoot(const wxString& value) { usbPidBoot = value; }
-        inline const wxString &getUsbPidBoot() const { return usbPidBoot; }
-
-        inline void setUsbPidApp(const wxString& value) { usbPidApp = value; }
-        inline const wxString &getUsbPidApp() const { return usbPidApp; }
-
-        inline void setUsbManufacturer(const wxString& value) { usbManufacturer = value; }
-        inline const wxString &getUsbManufacturer() const { return usbManufacturer; }
-
-        inline void setUsbProduct(const wxString& value) { usbProduct = value; }
-        inline const wxString &getUsbProduct() const { return usbProduct; }
-
-        inline void clearRelCommands() { return relCommands.Clear(); };
-        inline unsigned int getRelCommandsCount() const { return relCommands.GetCount(); };
-        inline void addRelCommand(const wxString& value)
-        {
-            relCommands.Add(value);
-        }
-        inline const wxString getRelCommand(const unsigned int index) const
-        {
-            if (index < relCommands.GetCount())
-                return relCommands[index];
-            return wxString("");
-        }
-
-        inline void clearFileExtensions() { return fileExtensions.Clear(); };
-        inline unsigned int getFileExtensionsCount() const { return fileExtensions.GetCount(); };
-        inline void addFileExtension(const wxString& value)
-        {
-            fileExtensions.Add(value);
-        }
-        inline const wxString getFileExtension(const unsigned int index) const
-        {
-            if (index < fileExtensions.GetCount())
-                return fileExtensions[index];
-            return wxString("");
-        }
-
-        //Syntax (code editor):
-        inline void setCodeLexer(int value) { codeLexer = value; }
-        inline int getCodeLexer() const { return codeLexer; }
-
-        inline void setCodeOperatorColor(const wxString& value) { codeOperatorColor = string2color(value); }
-        inline void setCodeOperatorColor(const wxColour& value) { codeOperatorColor = value; }
-        inline wxColour getCodeOperatorColor() const { return codeOperatorColor; }
-        inline void setCodeStringColor(const wxString& value) { codeStringColor = string2color(value); }
-        inline void setCodeStringColor(const wxColour& value) { codeStringColor = value; }
-        inline wxColour getCodeStringColor() const { return codeStringColor; }
-        inline void setCodePreprocessorColor(const wxString& value) { codePreprocessorColor = string2color(value); }
-        inline void setCodePreprocessorColor(const wxColour& value) { codePreprocessorColor = value; }
-        inline wxColour getCodePreprocessorColor() const { return codePreprocessorColor; }
-        inline void setCodeIdentifierColor(const wxString& value) { codeIdentifierColor = string2color(value); }
-        inline void setCodeIdentifierColor(const wxColour& value) { codeIdentifierColor = value; }
-        inline wxColour getCodeIdentifierColor() const { return codeIdentifierColor; }
-        inline void setCodeNumberColor(const wxString& value) { codeNumberColor = string2color(value); }
-        inline void setCodeNumberColor(const wxColour& value) { codeNumberColor = value; }
-        inline wxColour getCodeNumberColor() const { return codeNumberColor; }
-        inline void setCodeCharacterColor(const wxString& value) { codeCharacterColor = string2color(value); }
-        inline void setCodeCharacterColor(const wxColour& value) { codeCharacterColor = value; }
-        inline wxColour getCodeCharacterColor() const { return codeCharacterColor; }
-        inline void setCodeWordColor(const wxString& value) { codeWordColor = string2color(value); }
-        inline void setCodeWordColor(const wxColour& value) { codeWordColor = value; }
-        inline wxColour getCodeWordColor() const { return codeWordColor; }
-        inline void setCodeWord2Color(const wxString& value) { codeWord2Color = string2color(value); }
-        inline void setCodeWord2Color(const wxColour& value) { codeWord2Color = value; }
-        inline wxColour getCodeWord2Color() const { return codeWord2Color; }
-        inline void setCodeCommentColor(const wxString& value) { codeCommentColor = string2color(value); }
-        inline void setCodeCommentColor(const wxColour& value) { codeCommentColor = value; }
-        inline wxColour getCodeCommentColor() const { return codeCommentColor; }
-        inline void setCodeCommentLineColor(const wxString& value) { codeCommentLineColor = string2color(value); }
-        inline void setCodeCommentLineColor(const wxColour& value) { codeCommentLineColor = value; }
-        inline wxColour getCodeCommentLineColor() const { return codeCommentLineColor; }
-        inline void setCodeCommentDocColor(const wxString& value) { codeCommentDocColor = string2color(value); }
-        inline void setCodeCommentDocColor(const wxColour& value) { codeCommentDocColor = value; }
-        inline wxColour getCodeCommentDocColor() const { return codeCommentDocColor; }
-        inline void setCodeCommentDocKeywordColor(const wxString& value) { codeCommentDocKeywordColor = string2color(value); }
-        inline void setCodeCommentDocKeywordColor(const wxColour& value) { codeCommentDocKeywordColor = value; }
-        inline wxColour getCodeCommentDocKeywordColor() const { return codeCommentDocKeywordColor; }
-        inline void setCodeCommentDocKeywordErrorColor(const wxString& value) { codeCommentDocKeywordErrorColor = string2color(value); }
-        inline void setCodeCommentDocKeywordErrorColor(const wxColour& value) { codeCommentDocKeywordErrorColor = value; }
-        inline wxColour getCodeCommentDocKeywordErrorColor() const { return codeCommentDocKeywordErrorColor; }
-
-        inline void setCodeOperatorBold(bool value) { codeOperatorBold = value; }
-        inline bool getCodeOperatorBold() const { return codeOperatorBold; }
-        inline void setCodeStringBold(bool value) { codeStringBold = value; }
-        inline bool getCodeStringBold() const { return codeStringBold; }
-        inline void setCodePreprocessorBold(bool value) { codePreprocessorBold = value; }
-        inline bool getCodePreprocessorBold() const { return codePreprocessorBold; }
-        inline void setCodeIdentifierBold(bool value) { codeIdentifierBold = value; }
-        inline bool getCodeIdentifierBold() const { return codeIdentifierBold; }
-        inline void setCodeNumberBold(bool value) { codeNumberBold = value; }
-        inline bool getCodeNumberBold() const { return codeNumberBold; }
-        inline void setCodeCharacterBold(bool value) { codeCharacterBold = value; }
-        inline bool getCodeCharacterBold() const { return codeCharacterBold; }
-        inline void setCodeWordBold(bool value) { codeWordBold = value; }
-        inline bool getCodeWordBold() const { return codeWordBold; }
-        inline void setCodeWord2Bold(bool value) { codeWord2Bold = value; }
-        inline bool getCodeWord2Bold() const { return codeWord2Bold; }
-        inline void setCodeCommentBold(bool value) { codeCommentBold = value; }
-        inline bool getCodeCommentBold() const { return codeCommentBold; }
-        inline void setCodeCommentLineBold(bool value) { codeCommentLineBold = value; }
-        inline bool getCodeCommentLineBold() const { return codeCommentLineBold; }
-        inline void setCodeCommentDocBold(bool value) { codeCommentDocBold = value; }
-        inline bool getCodeCommentDocBold() const { return codeCommentDocBold; }
-        inline void setCodeCommentDocKeywordBold(bool value) { codeCommentDocKeywordBold = value; }
-        inline bool getCodeCommentDocKeywordBold() const { return codeCommentDocKeywordBold; }
-        inline void setCodeCommentDocKeywordErrorBold(bool value) { codeCommentDocKeywordErrorBold = value; }
-        inline bool getCodeCommentDocKeywordErrorBold() const { return codeCommentDocKeywordErrorBold; }
-
-        inline void setCodeTabWidth(unsigned int value) { codeTabWidth = value; }
-        inline unsigned int getCodeTabWidth() const { return codeTabWidth; }
-
-        void addCodeKeyWord(wxString& keywords, const wxString& value);
-
-        inline void setCodeKeywords0(const wxString& value) { codeKeywords0 = value; }
         void addCodeKeywords0(const wxString& value) { addCodeKeyWord(codeKeywords0, value); }
-        inline wxString getCodeKeywords0() const { return codeKeywords0; }
-
-        inline void setCodeKeywords1(const wxString& value) { codeKeywords1 = value; }
         void addCodeKeywords1(const wxString& value) { addCodeKeyWord(codeKeywords1, value); }
-        inline wxString getCodeKeywords1() const { return codeKeywords1; }
 };
 
 

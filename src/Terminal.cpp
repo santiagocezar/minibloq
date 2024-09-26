@@ -815,18 +815,18 @@ void BaseTerminalGUI::onButtonOpenPort(wxCommandEvent& event)
                 if (bubble->getHardwareManager()->getCurrentBoardProperties())
                 {
                     long usbVidValue = 0;
-                    bubble->getHardwareManager()->getCurrentBoardProperties()->getUsbVid().ToLong(&usbVidValue, 16);
+                    bubble->getHardwareManager()->getCurrentBoardProperties()->usbVid.ToLong(&usbVidValue, 16);
                     long usbPidBootValue = 0;
-                    bubble->getHardwareManager()->getCurrentBoardProperties()->getUsbPidBoot().ToLong(&usbPidBootValue, 16);
+                    bubble->getHardwareManager()->getCurrentBoardProperties()->usbPidBoot.ToLong(&usbPidBootValue, 16);
                     long usbPidAppValue = 0;
-                    bubble->getHardwareManager()->getCurrentBoardProperties()->getUsbPidApp().ToLong(&usbPidAppValue, 16);
+                    bubble->getHardwareManager()->getCurrentBoardProperties()->usbPidApp.ToLong(&usbPidAppValue, 16);
 
                     //##Future: this will be configurable:
                     commManager->setPortName(bubble->getBootPortName(), (int)usbVidValue, (int)usbPidBootValue, (int)usbPidAppValue);
 
                     //##Future: this will be configurable:
                     //commManager->setBaudRate(wxBAUD_115200);
-                    commManager->setBaudRate((wxBaud)bubble->getHardwareManager()->getCurrentBoardProperties()->getBootBaudRate());
+                    commManager->setBaudRate((wxBaud)bubble->getHardwareManager()->getCurrentBoardProperties()->bootBaudRate);
                 }
             }
         }

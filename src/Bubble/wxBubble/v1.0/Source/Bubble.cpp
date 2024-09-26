@@ -55,12 +55,6 @@ wxColour string2color(const wxString &value)
 }
 
 
-void BubbleBoardProperties::addCodeKeyWord(wxString& keywords, const wxString& value)
-{
-    if (!keywords.Contains(value))
-        keywords += wxString(" ") + value;
-}
-
 //##Ver cómo agregar chequeo de que si no setean el parent y el notifier, TODO MAL!
 /*
 Bubble::Bubble(IBubbleNotifier *notifier) : parent(NULL),
@@ -1318,7 +1312,7 @@ bool Bubble::verifyPortExistance()
     {
         unsigned int times = 0;
         while ( !(BubbleHardwareManager::serialPortExists(bootPortName)) &&
-                (times < getHardwareManager()->getCurrentBoardProperties()->getBootFindPortTries())
+                (times < getHardwareManager()->getCurrentBoardProperties()->bootFindPortTries)
               )
         {
             times++;
@@ -1350,7 +1344,7 @@ bool Bubble::deploy()
     //reset process. For exmaple, like the Multiplo DuinoBot board, which uses a run button, so once
     //it's reset, the board will wait until the run button is pressed, or until the software sends a new
     //program and to the flash and then run it from the comm port.
-    if (getHardwareManager()->getCurrentBoardProperties()->getResetBeforeBuild())
+    if (getHardwareManager()->getCurrentBoardProperties()->resetBeforeBuild)
     {
         //First, reset the progress bar:
         //##getNotifier()->setProgressPosition(0, false, false);
@@ -1364,7 +1358,7 @@ bool Bubble::deploy()
 
     if (build())
     {
-        if ( !(getHardwareManager()->getCurrentBoardProperties()->getResetBeforeBuild()) )
+        if ( !(getHardwareManager()->getCurrentBoardProperties()->resetBeforeBuild) )
         {
             //verifyPortExistance(); //##Return value not used by now.
             getNotifier()->showMessage(_("\nReseting the board...\n"), false, false, *wxBLUE);
@@ -1380,7 +1374,7 @@ bool Bubble::deploy()
 
         //Load the commands from the .board XML file:
         commands.Clear();
-        commands = bubbleXML.loadExternalCommands(wxString("deploy"), getHardwareManager()->getCurrentBoardProperties()->getPath() + wxString("/main.board"));
+        commands = bubbleXML.loadExternalCommands(wxString("deploy"), getHardwareManager()->getCurrentBoardProperties()->path + wxString("/main.board"));
         //cmd = bubbleXML.parseCmd(cmd);
 
         //Executes the loaded commands:
@@ -1428,9 +1422,9 @@ bool Bubble::build()
         wxArrayString output, errors;
         wxString cmd("");
         unsigned int i = 0;
-        while (i < getHardwareManager()->getCurrentBoardProperties()->getRelCommandsCount())
+        while (i < getHardwareManager()->getCurrentBoardProperties()->relCommands.Count())
         {
-            cmd = getHardwareManager()->getCurrentBoardProperties()->getRelCommand(i);
+            cmd = getHardwareManager()->getCurrentBoardProperties()->relCommands[i];
             getNotifier()->showMessage(/*(wxString("") << i) + wxString(": ") + */cmd + wxString("\n"), false, true, *wxGREEN);
             wxExecute(cmd, output, errors);
 
@@ -1444,13 +1438,13 @@ bool Bubble::build()
 ////////////////////////
         //Loads and executes the commands from for each file extension set of added files:
         unsigned int extensionIndex = 0;
-        while (extensionIndex < getHardwareManager()->getCurrentBoardProperties()->getFileExtensionsCount())
+        while (extensionIndex < getHardwareManager()->getCurrentBoardProperties()->fileExtensions.Count())
         {
-            wxString extension = getHardwareManager()->getCurrentBoardProperties()->getFileExtension(extensionIndex);
+            wxString extension = getHardwareManager()->getCurrentBoardProperties()->fileExtensions[extensionIndex];
             cmd = wxString("");
             wxArrayString fileCommands;
             fileCommands.Clear();
-            fileCommands = bubbleXML.loadExternalCommands(extension, getHardwareManager()->getCurrentBoardProperties()->getPath() + wxString("/main.board"));
+            fileCommands = bubbleXML.loadExternalCommands(extension, getHardwareManager()->getCurrentBoardProperties()->path + wxString("/main.board"));
 
             //Executes the loaded commands for each file added to the component with this extenstion:
             FileEditorHash::iterator it;
@@ -1491,7 +1485,7 @@ bool Bubble::build()
         cmd = wxString("");
         wxArrayString commands;
         commands.Clear();
-        commands = bubbleXML.loadExternalCommands(wxString("build"), getHardwareManager()->getCurrentBoardProperties()->getPath() + wxString("/main.board"));
+        commands = bubbleXML.loadExternalCommands(wxString("build"), getHardwareManager()->getCurrentBoardProperties()->path + wxString("/main.board"));
         //cmd = bubbleXML.parseCmd(cmd);
 
         //wxMessageDialog dialog0(parent, wxString("") << count, _("commands:"));
@@ -1685,7 +1679,7 @@ bool Bubble::resetBoard()
     if (getHardwareManager()->getCurrentBoardProperties() == NULL)
         return false;
 
-    wxString boardFileName = getHardwareManager()->getCurrentBoardProperties()->getPath() + wxString("/main.board");
+    wxString boardFileName = getHardwareManager()->getCurrentBoardProperties()->path + wxString("/main.board");
     bool mustReset =    bubbleXML.sectionExists(boardFileName, wxString("resetInternal")) ||
                         bubbleXML.sectionExists(boardFileName, wxString("resetExternal"));
 
@@ -1866,7 +1860,7 @@ void Bubble::addInitCode()
     if (getHardwareManager()->getCurrentBoardProperties() == NULL)
         return;
 
-    generatedCode.Add(getHardwareManager()->getCurrentBoardProperties()->getInitCode());
+    generatedCode.Add(getHardwareManager()->getCurrentBoardProperties()->initCode);
 }
 
 
@@ -1877,7 +1871,7 @@ void Bubble::addFinalCode()
     if (getHardwareManager()->getCurrentBoardProperties() == NULL)
         return;
 
-    generatedCode.Add(getHardwareManager()->getCurrentBoardProperties()->getFinalCode());
+    generatedCode.Add(getHardwareManager()->getCurrentBoardProperties()->finalCode);
 }
 
 
@@ -2046,8 +2040,8 @@ bool Bubble::updateCode()
             wxString strCommentEnd("");
             if (iteratorBlock->isCommented())
             {
-                strCommentBegin = getHardwareManager()->getCurrentBoardProperties()->getCommentBegin();
-                strCommentEnd = getHardwareManager()->getCurrentBoardProperties()->getCommentEnd();
+                strCommentBegin = getHardwareManager()->getCurrentBoardProperties()->commentBegin;
+                strCommentEnd = getHardwareManager()->getCurrentBoardProperties()->commentEnd;
             }
 
             //##En cosas como el código G, que quizá tengan sólo un encabezado tipo "comentario",
@@ -2138,17 +2132,17 @@ bool Bubble::generateCodeAndSaveToFile()
         //In Arduino-compatible systems, this file is used to pass a file with valid extension to the compiler, instead of, for
         //example a .ino file. In the future it's possible that this will become configurable in the backend, specially to support
         //other languajes different than C/C++:
-        if (getHardwareManager()->getCurrentBoardProperties()->getUseWrapper())
+        if (getHardwareManager()->getCurrentBoardProperties()->useWrapper)
         {
             wxTextFile wrapperOutput;
             if ( !wrapperOutput.Create( getOutputPath() + wxString("/") + getComponentFilesPath().AfterLast('/') + wxString(".") +
-                                        getHardwareManager()->getCurrentBoardProperties()->getCodeFileExtension() )
+                                        getHardwareManager()->getCurrentBoardProperties()->codeFileExtension )
                )
                 return false;
-            wrapperOutput.AddLine(  getHardwareManager()->getCurrentBoardProperties()->getIncludeCodePrefix() +
+            wrapperOutput.AddLine(  getHardwareManager()->getCurrentBoardProperties()->includeCodePrefix +
                                     getComponentFilesPath().AfterLast('/') + wxString(".") +
-                                    getHardwareManager()->getCurrentBoardProperties()->getOutputMainFileExtension() +
-                                    getHardwareManager()->getCurrentBoardProperties()->getIncludeCodePostfix()
+                                    getHardwareManager()->getCurrentBoardProperties()->outputMainFileExtension +
+                                    getHardwareManager()->getCurrentBoardProperties()->includeCodePostfix
                                  );
             if ( !wrapperOutput.Write() )
                 return false;
@@ -2159,15 +2153,15 @@ bool Bubble::generateCodeAndSaveToFile()
         //This is the global header, to be included by other code files that need to access the board's instances and constants:
         wxTextFile mbqGlogalsHeader;
         wxString mbqGlogalsHeaderName = getComponentFilesPath() + wxString("/mbq.") +
-                                        getHardwareManager()->getCurrentBoardProperties()->getHeaderFileExtension();
+                                        getHardwareManager()->getCurrentBoardProperties()->headerFileExtension;
         wxRemoveFile(mbqGlogalsHeaderName);
         if ( !mbqGlogalsHeader.Create(mbqGlogalsHeaderName) )
             return false;
-        mbqGlogalsHeader.AddLine(getHardwareManager()->getCurrentBoardProperties()->getIncludeInitCode());
+        mbqGlogalsHeader.AddLine(getHardwareManager()->getCurrentBoardProperties()->includeInitCode);
         mbqGlogalsHeader.AddLine(getIncludesCodeList());
-        mbqGlogalsHeader.AddLine(getHardwareManager()->getCurrentBoardProperties()->getDefinesCodeList());
-        mbqGlogalsHeader.AddLine(getHardwareManager()->getCurrentBoardProperties()->getInstancesHeaderCodeList());
-        mbqGlogalsHeader.AddLine(getHardwareManager()->getCurrentBoardProperties()->getIncludeFinalCode());
+        mbqGlogalsHeader.AddLine(getHardwareManager()->getCurrentBoardProperties()->definesCodeList);
+        mbqGlogalsHeader.AddLine(getHardwareManager()->getCurrentBoardProperties()->instancesHeaderCodeList);
+        mbqGlogalsHeader.AddLine(getHardwareManager()->getCurrentBoardProperties()->includeFinalCode);
         if ( !mbqGlogalsHeader.Write() )
             return false;
         if ( !mbqGlogalsHeader.Close() )
@@ -2176,17 +2170,17 @@ bool Bubble::generateCodeAndSaveToFile()
         //Creates the initBoard file:
         wxTextFile initBoardFile;
         wxString initBoardFileName =    getComponentFilesPath() + wxString("/initBoard.") +
-                                        getHardwareManager()->getCurrentBoardProperties()->getCodeFileExtension();
+                                        getHardwareManager()->getCurrentBoardProperties()->codeFileExtension;
         wxRemoveFile(initBoardFileName);
         if ( !initBoardFile.Create(initBoardFileName) )
             return false;
-        initBoardFile.AddLine(getHardwareManager()->getCurrentBoardProperties()->getInitBoardHeader());
+        initBoardFile.AddLine(getHardwareManager()->getCurrentBoardProperties()->initBoardHeader);
         initBoardFile.AddLine(wxString(""));
-        initBoardFile.AddLine(getHardwareManager()->getCurrentBoardProperties()->getInstancesCodeList());
+        initBoardFile.AddLine(getHardwareManager()->getCurrentBoardProperties()->instancesCodeList);
         initBoardFile.AddLine(wxString(""));
-        initBoardFile.AddLine(getHardwareManager()->getCurrentBoardProperties()->getInitBoardPrefix());
+        initBoardFile.AddLine(getHardwareManager()->getCurrentBoardProperties()->initBoardPrefix);
         initBoardFile.AddLine(getInitBoardCode() +
-                              getHardwareManager()->getCurrentBoardProperties()->getInitBoardPostfix()
+                              getHardwareManager()->getCurrentBoardProperties()->initBoardPostfix
                              );
         if ( !initBoardFile.Write() )
             return false;
@@ -2196,7 +2190,7 @@ bool Bubble::generateCodeAndSaveToFile()
         //Try to create the main file:
         wxTextFile mainOutput;
         wxString mainOutputName = getComponentFilesPath() + wxString("/") + getComponentFilesPath().AfterLast('/') +
-                                  wxString(".") + getHardwareManager()->getCurrentBoardProperties()->getOutputMainFileExtension();
+                                  wxString(".") + getHardwareManager()->getCurrentBoardProperties()->outputMainFileExtension;
         wxRemoveFile(mainOutputName);
         if ( !mainOutput.Create(mainOutputName) )
             return false;

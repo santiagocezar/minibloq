@@ -118,10 +118,10 @@ BubbleHardwareManager::BubbleHardwareManager(   wxWindow* parent,
                 iterator = &(boardsProperties.Item(i)); //##In theory, this is faster than the other index based form, but I'm not sure yet...
                 if (iterator)
                 {
-                    if (iterator->getName() == boardName)
+                    if (iterator->name == boardName)
                     {
                         initialBoard = iterator;
-                        currentBoardProperties->set(iterator);
+                        currentBoardProperties = iterator;
                         comboBoardName->setSelection(boardName);
                         found = true;
                     }
@@ -191,12 +191,12 @@ BubbleHardwareManager::BubbleHardwareManager(   wxWindow* parent,
         if (getCurrentBoardProperties())
         {
             //This is necessary for the first time the system loads the boards:
-            if ( (getCurrentBoardProperties()->getPortType() == wxString("HID")) ||
-                 (getCurrentBoardProperties()->getPortType() == wxString("HID2"))
+            if ( (getCurrentBoardProperties()->portType == wxString("HID")) ||
+                 (getCurrentBoardProperties()->portType == wxString("HID2"))
                )
             {
                 setPortSelectorEnabled(false);
-                setPortNameString((getCurrentBoardProperties())->getPortType());
+                setPortNameString((getCurrentBoardProperties())->portType);
             }
         }
 //        comboBootPortName->setSelection(0); //##Un-hardcode and get the port from the config file...
@@ -263,11 +263,11 @@ BubbleHardwareManager::BubbleHardwareManager(   wxWindow* parent,
 
         if (getCurrentBoardProperties())
         {
-            buttonGoToDriversDir->Enable(getCurrentBoardProperties()->getDriverPath() != wxString(""));
+            buttonGoToDriversDir->Enable(getCurrentBoardProperties()->driverPath != wxString(""));
             lblURL0 = new wxHyperlinkCtrl(  this,
                                             wxNewId(),
-                                            getCurrentBoardProperties()->getUrl0(),
-                                            getCurrentBoardProperties()->getUrl0(),
+                                            getCurrentBoardProperties()->url0,
+                                            getCurrentBoardProperties()->url0,
                                             wxPoint(buttonGoToDriversDir->GetPosition().x,
                                                     buttonGoToDriversDir->GetPosition().y +
                                                     buttonGoToDriversDir->GetSize().GetHeight() + 10),
@@ -289,8 +289,8 @@ BubbleHardwareManager::BubbleHardwareManager(   wxWindow* parent,
                 }
                 lblURL1 = new wxHyperlinkCtrl(  this,
                                                 wxNewId(),
-                                                getCurrentBoardProperties()->getUrl1(),
-                                                getCurrentBoardProperties()->getUrl1(),
+                                                getCurrentBoardProperties()->url1,
+                                                getCurrentBoardProperties()->url1,
                                                 wxPoint(lblURL0->GetPosition().x,
                                                         lblURL0->GetPosition().y +
                                                         lblURL0->GetSize().GetHeight() + 10),
@@ -330,7 +330,7 @@ void BubbleHardwareManager::selectFirstBoard()
     BubbleBoardProperties *initialBoard = NULL;
     if (boardsProperties.GetCount() > 0) {
         initialBoard = &(boardsProperties.Item(0));
-        currentBoardProperties->set(initialBoard);
+        currentBoardProperties = initialBoard; // TODO: check for memory leaks in everyone of these
         comboBoardName->setSelection(0); //It's very important to select a board in this constructor.
     }
 }
@@ -343,9 +343,9 @@ void BubbleHardwareManager::addBoard(BubbleBoardProperties *boardProperties)
         if (boardProperties)
         {
             boardsProperties.Add(boardProperties);
-            comboBoardName->append( boardProperties->getName(),
-                                    new wxImage(boardProperties->getPath() + wxString("/img/") +
-                                                boardProperties->getImgThumb())
+            comboBoardName->append( boardProperties->name,
+                                    new wxImage(boardProperties->path + wxString("/img/") +
+                                                boardProperties->imgThumb)
                                   );
         }
     }
@@ -371,8 +371,8 @@ void BubbleHardwareManager::changeImage()
     if (currentBoardProperties == NULL)
         return;
 
-    buttonMainImage->setImageDefault(wxImage(currentBoardProperties->getPath() +
-                                             wxString("/img/") + currentBoardProperties->getImgMain())
+    buttonMainImage->setImageDefault(wxImage(currentBoardProperties->path +
+                                             wxString("/img/") + currentBoardProperties->imgMain)
                                     );
     fit(GetSize());
 
@@ -416,7 +416,7 @@ void BubbleHardwareManager::onButtonGoToDriversDirLeftUp(wxMouseEvent& event)
                 if (getCurrentBoardProperties())
                 {
                     wxString folderPath =   bubble->getComponentsRepositoryPath() + wxString("/") +
-                                            getCurrentBoardProperties()->getDriverPath();
+                                            getCurrentBoardProperties()->driverPath;
 //                    //##Debug:
 //                    wxMessageDialog dialog0(bubble->getParent(), folderPath,
 //                                            getCurrentBoardProperties()->getName()); //##Debug.
@@ -725,9 +725,9 @@ void BubbleHardwareManager::onComboBoardNameChanged(wxCommandEvent &event)
                     iterator = &(boardsProperties.Item(i)); //##In theory, this is faster than the other index based form, but I'm not sure yet...
                     if (iterator)
                     {
-                        if (iterator->getName() == event.GetString())
+                        if (iterator->name == event.GetString())
                         {
-                            currentBoardProperties->set(iterator);
+                            currentBoardProperties = iterator; // TODO: mem check
                         }
                     }
                 }
@@ -738,12 +738,12 @@ void BubbleHardwareManager::onComboBoardNameChanged(wxCommandEvent &event)
                 //                                             getCurrentBoardProperties()->getName()); //##Debug.
                 //dialog0.ShowModal(); //##Debug.
 
-                if ( ((getCurrentBoardProperties())->getPortType() == wxString("HID")) || //##Unhardcode
-                     ((getCurrentBoardProperties())->getPortType() == wxString("HID2"))
+                if ( ((getCurrentBoardProperties())->portType == wxString("HID")) || //##Unhardcode
+                     ((getCurrentBoardProperties())->portType == wxString("HID2"))
                    )
                 {
                     setPortSelectorEnabled(false);
-                    setPortNameString((getCurrentBoardProperties())->getPortType());
+                    setPortNameString((getCurrentBoardProperties())->portType);
                 }
                 else
                 {
@@ -769,19 +769,19 @@ void BubbleHardwareManager::onComboBoardNameChanged(wxCommandEvent &event)
                     if (buttonGoToDriversDir)
                     {
                         //Are there device drivers for this board?
-                        buttonGoToDriversDir->Enable(getCurrentBoardProperties()->getDriverPath() != wxString(""));
+                        buttonGoToDriversDir->Enable(getCurrentBoardProperties()->driverPath != wxString(""));
 
                         //Are there links for this board?
                         if (lblURL0)
                         {
-                            lblURL0->SetURL(getCurrentBoardProperties()->getUrl0());
-                            lblURL0->SetLabel(getCurrentBoardProperties()->getUrl0());
+                            lblURL0->SetURL(getCurrentBoardProperties()->url0);
+                            lblURL0->SetLabel(getCurrentBoardProperties()->url0);
                             lblURL0->SetPosition(wxPoint(buttonGoToDriversDir->GetPosition().x, lblURL0->GetPosition().y));
                         }
                         if (lblURL1)
                         {
-                            lblURL1->SetURL(getCurrentBoardProperties()->getUrl1());
-                            lblURL1->SetLabel(getCurrentBoardProperties()->getUrl1());
+                            lblURL1->SetURL(getCurrentBoardProperties()->url1);
+                            lblURL1->SetLabel(getCurrentBoardProperties()->url1);
                             lblURL1->SetPosition(wxPoint(buttonGoToDriversDir->GetPosition().x, lblURL1->GetPosition().y));
                         }
                     }

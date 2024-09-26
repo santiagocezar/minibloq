@@ -15,16 +15,16 @@ res = include_directories(
   'data/Resources'
 )
 
-# install_subdir(
-#   'data/Bin/Minibloq',
-#   install_dir : get_option('datadir') / 'minibloq',
-#   exclude_directories : [
-#     '_drivers',
-#     '_lang',
-#     '_tools',
-#   ],
-#
-#   strip_directory : true)
+install_subdir(
+  'data/Bin/Minibloq',
+  install_dir : get_option('datadir') / 'minibloq',
+  exclude_directories : [
+    '_drivers',
+    '_lang',
+    '_tools',
+  ],
+
+  strip_directory : true)
 
 executable('minibloq',
            sources,
