@@ -335,7 +335,7 @@ void BubbleHardwareManager::selectFirstBoard()
     }
 }
 
-
+/*
 void BubbleHardwareManager::addBoard(BubbleBoardProperties *boardProperties)
 {
     if (comboBoardName)
@@ -349,7 +349,7 @@ void BubbleHardwareManager::addBoard(BubbleBoardProperties *boardProperties)
                                   );
         }
     }
-}
+}*/
 
 
 void BubbleHardwareManager::updateGUI()

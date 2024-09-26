@@ -1,16 +1,16 @@
 #include "hardware.hpp"
+#include "xml_compat.hpp"
 
-#include "include/portscan.h"
-#include <utility>
-#include <algorithm>
+#include <vector>
+#include <string>
 #include <fmt/core.h>
-
 
 namespace hardware
 {
     //##Make the limit configurable, from an XML file (and see the Windows and Linux API documetation too
     //to avoid defining it smaller than possibly needed):
     const int MAX_PORTS = 256;
+
 
     model _update(model m, reload_ports a) {
         std::vector<std::string> ports;
@@ -52,6 +52,11 @@ namespace hardware
     }
     model _update(model m, select_port a) {
         m.selected_port = a.idx;
+        return m;
+    }
+    model _update(model m, load_hardware a) {
+        auto boards = load_all_boards(a.path);
+        m.boards = immer::vector<board>(boards.begin(), boards.end());
         return m;
     }
 

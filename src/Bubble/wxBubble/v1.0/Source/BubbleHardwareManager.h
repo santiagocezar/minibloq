@@ -85,15 +85,15 @@ class BubbleHardwareManager : public wxPanel
                               );
         virtual ~BubbleHardwareManager();
 
-        void selectFirstBoard();
-        void clearBoardProperties()
-        {
-            boardsProperties.Clear();
-            if (comboBoardName)
-                comboBoardName->clear();
-        }
-        void addBoard(BubbleBoardProperties *boardProperties);
-        inline BubbleBoardProperties *getCurrentBoardProperties() { return currentBoardProperties; };
+        // void selectFirstBoard();
+        // void clearBoardProperties()
+        // {
+        //     boardsProperties.Clear();
+        //     if (comboBoardName)
+        //         comboBoardName->clear();
+        // }
+        // void addBoard(BubbleBoardProperties *boardProperties);
+        // inline BubbleBoardProperties *getCurrentBoardProperties() { return currentBoardProperties; };
 
         void updateGUI();
         void changeImage();

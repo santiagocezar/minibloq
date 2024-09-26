@@ -99,6 +99,7 @@ class IBubbleNotifier
 
 
 class Bubble;
+#if 0
 class BubbleBoardProperties
 {
     private:
@@ -658,7 +659,7 @@ class BubbleBoardProperties
         void addCodeKeywords1(const wxString& value) { addCodeKeyWord(codeKeywords1, value); }
         inline wxString getCodeKeywords1() const { return codeKeywords1; }
 };
-
+#endif
 
 //The BubbleXML class manages the language structure (blocks info, canvases info, etc.). It DOES NOT deals
 //with the load/save of programs, only with the structural things:

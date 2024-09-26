@@ -308,6 +308,7 @@ bool BubbleXML::isXMLVariable(const wxString& variableName) const
 }
 
 
+// TODO: understand WHAT IS THIS
 //The param fileName is necessary so this function can return the "thisBlockPath::" variable:
 wxString BubbleXML::getInternalVariableValue(const wxString& variableName, const wxString& fileName) const
 {
@@ -1648,7 +1649,7 @@ bool BubbleXML::blockIsValid(const wxString& name, const wxString& type) const
 //    return result;
 //}
 
-
+// NOTE: ported
 BubbleBoardProperties *BubbleXML::loadBoardProperties(const wxString &fullBoardFileName)
 {
     if (bubble == NULL)
@@ -2050,7 +2051,7 @@ const wxArrayString BubbleXML::loadExternalCommands(const wxString &section, con
     return result;
 }
 
-
+// NOTE: ported
 int BubbleXML::loadHardwareTargets(BubbleHardwareManager *hardwareManager)
 {
     if (bubble == NULL)
@@ -2190,7 +2191,7 @@ bool BubbleXML::loadInitBoardCodeFromXML(wxXmlNode *node, BubbleBoardProperties 
     return true;
 }
 
-
+// NOTE: ported
 bool BubbleXML::loadIncludePathsFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties, bool onlyBoard)
 {
     if (bubble == NULL)
@@ -2246,7 +2247,7 @@ bool BubbleXML::loadIncludePathsFromXML(wxXmlNode *node, BubbleBoardProperties *
     return true;
 }
 
-
+// NOTE: ported
 bool BubbleXML::loadSyntaxFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties)
 {
     if (bubble == NULL)
@@ -2462,6 +2463,7 @@ bool BubbleXML::loadIncludeFilesFromXML(wxXmlNode *node, BubbleBoardProperties *
         includeNode = includeNode->GetNext();
 
         //Is a board include or a relation include?
+        // FIXME: wait this assumes the other prefix and postfix values are set, that means the XML must be parsed in an specific order, no good!
         if (onlyBoard)
         {
             //Board:
