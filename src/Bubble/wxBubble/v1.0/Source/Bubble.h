@@ -43,14 +43,14 @@ wxColour string2color(const wxString &value);
 class BubbleActionPicker; //##
 class BubbleExpressionPicker; //##
 class BubbleProcess; //##
-class IBubbleNotifier
+class BubbleEventHandler
 {
     public:
-        IBubbleNotifier()
+        BubbleEventHandler()
         {
         }
 
-        virtual ~IBubbleNotifier() { }
+        virtual ~BubbleEventHandler() { }
 
         //To avoid use of void pointers, base class arguments/returns, etc., the user can define a friend
         //function member called from the inherited xxxNotify() method:
@@ -340,7 +340,7 @@ class BubbleXML
 };
 
 
-class Bubble : public IBubbleFileIO
+class Bubble
 {
     protected:
         wxWindow *parent;
@@ -357,7 +357,7 @@ class Bubble : public IBubbleFileIO
         wxString actionDataType;
         wxString variableInitName;
 
-        IBubbleNotifier *notifier;
+        BubbleEventHandler *notifier;
 
         wxString bootPortName;
         //##Future: There may be other serial ports, not only the main one (used for both bootloading and
@@ -413,6 +413,7 @@ class Bubble : public IBubbleFileIO
 
         wxString generateXMLFromParams(BubbleBlock *block);
 
+        bool saved;
 
     public:
         //Construction:
@@ -437,12 +438,13 @@ class Bubble : public IBubbleFileIO
         static wxArrayString string2Array(const wxString &value);
         static unsigned int strOcurrencesInArray(const wxString &str, const wxSortedArrayString &array);
 
-        virtual bool isSaved() const;
+        bool isSaved() const;
+        inline void forceSaved(const bool value) { saved = true; }
 
         void setCanvasesParent(wxWindow *value); //##Agregar los const al parámetro
         //##Esto es casi obligatorio, si no no hay intercambio de eventos con el frame o con quien contenga la instancia de Bubble:
-        void setNotifier(IBubbleNotifier *value);
-        IBubbleNotifier *getNotifier();
+        void setNotifier(BubbleEventHandler *value);
+        BubbleEventHandler *getNotifier();
 
         //Language/Blocks structure:
         bool addBlockToPicker(BubbleBlockInfo *block, wxWindow *pickersParent);

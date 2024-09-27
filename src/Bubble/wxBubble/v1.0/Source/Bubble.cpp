@@ -104,13 +104,10 @@ Bubble::Bubble(wxLocale& locale) :  parent(NULL),
                                     componentPath(wxString("")),
                                     outputPath(wxString("")),
 
-                                    simplifyCode(false)
-{
-    //##Falan implementar cosas...?
-    saved = true;   //##Ver cómo funciona el tema de la herencia con clases abstractas, si se pueden
-                    //inicializar las variables en la lista del constructor de la clase abstracta...
-    fileEditorHash.clear();
-}
+                                    simplifyCode(false),
+
+                                    saved(true)
+{}
 
 
 Bubble::~Bubble()
@@ -237,13 +234,13 @@ void Bubble::setCanvasesParent(wxWindow *value)
 }
 
 
-void Bubble::setNotifier(IBubbleNotifier *value)
+void Bubble::setNotifier(BubbleEventHandler *value)
 {
     notifier = value;
 }
 
 
-IBubbleNotifier *Bubble::getNotifier()
+BubbleEventHandler *Bubble::getNotifier()
 {
     return notifier;
 }

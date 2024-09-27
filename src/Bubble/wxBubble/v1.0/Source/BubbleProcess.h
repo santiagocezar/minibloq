@@ -11,14 +11,14 @@
 //cosa que ¿podría crasehar la aplicación? De todos modos, necesito esos buffers para mostrar la barra de progreso
 //en el futuro.
 //##Si la cosa realmente no va, voy a usar la API del sistema operativo directamente, como hice en el MinibloqRun.
-class IBubbleNotifier;
+class BubbleEventHandler;
 class BubbleProcess : public wxProcess
 {
     protected:
-        IBubbleNotifier *notifier;
+        BubbleEventHandler *notifier;
 
     public:
-        BubbleProcess(IBubbleNotifier *notifier) :  //wxProcess(wxPROCESS_DEFAULT), //##<- Only for debug.
+        BubbleProcess(BubbleEventHandler *notifier) :  //wxProcess(wxPROCESS_DEFAULT), //##<- Only for debug.
                                                     wxProcess(wxPROCESS_REDIRECT), //##Va éste: Ojo que no llene el buffer de stdout
                                                     notifier(notifier)
         {
