@@ -4,6 +4,7 @@
 #include "BubblePanel.h"
 #include "BubbleButton.h"
 #include "BubbleCombo.h"
+#include "BubbleBoardProperties.h"
 
 #include <string>
 #include <vector>
@@ -18,20 +19,14 @@
 #include <wx/button.h>
 #include <wx/hyperlink.h>
 
-#include <wx/arrimpl.cpp> //This is a magic incantation which must be done!
-class BubbleBoardProperties;
-WX_DECLARE_OBJARRAY(BubbleBoardProperties, arrayOfBoardProperties);
-
-
 class Bubble;
-class BubbleBoardProperties;
 class BubbleHardwareManager : public wxPanel
 {
     private:
         wxWindow* parent;
         Bubble *bubble;
         wxString boardName;
-        BubbleBoardProperties *currentBoardProperties;
+        const BubbleBoardProperties *currentBoardProperties;
         wxStaticText *lblBootPortName;
         wxComboBox *comboBootPortName;
         wxStaticText *lblBoardName;
@@ -46,7 +41,7 @@ class BubbleHardwareManager : public wxPanel
         //##Horrible, but works nice!
         wxString emptyDummyString;
 
-        arrayOfBoardProperties boardsProperties;
+        std::vector<BubbleBoardProperties> boardsProperties;
 
         lager::reader<hardware::model> hardware;
         lager::reader<decltype (hardware::model::available_ports)> ports;
@@ -85,15 +80,14 @@ class BubbleHardwareManager : public wxPanel
                               );
         virtual ~BubbleHardwareManager();
 
-        void selectFirstBoard();
         void clearBoardProperties()
         {
-            boardsProperties.Clear();
+            boardsProperties.clear();
             if (comboBoardName)
                 comboBoardName->clear();
         }
-        void addBoard(BubbleBoardProperties *boardProperties);
-        inline BubbleBoardProperties *getCurrentBoardProperties() { return currentBoardProperties; };
+        void addBoard(BubbleBoardProperties boardProperties);
+        inline const BubbleBoardProperties *getCurrentBoardProperties() { return currentBoardProperties; };
 
         void updateGUI();
         void changeImage();

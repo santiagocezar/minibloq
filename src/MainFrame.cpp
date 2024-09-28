@@ -275,13 +275,6 @@ MainFrame::MainFrame(   wxWindow* parent,
     bubble.setAppPath(bubble.getComponentsRepositoryPath() + wxString("/mbq"));
     std::cout << bubble.getAppPath() << std::endl;
     std::cout << bubble.getComponentsRepositoryPath() << std::endl;
-    bubble.setHost(wxString("win_i386"));
-#if defined (linux) && defined(__i386__)
-    bubble.setHost(wxString("linux_i386"));
-#endif
-#if defined (linux) && defined(__x86_64__)
-    bubble.setHost(wxString("linux_amd64"));
-#endif
 
     //##2011.10.02: This threshold (of 152 characters) has been determined experimantally, as a WinAVR
     //limitation. But this is just a small patch until we found a better solution (which will be proabley
@@ -458,7 +451,7 @@ MainFrame::MainFrame(   wxWindow* parent,
     changeBoardNotify();
 
     //This forces to load the includes in the generated code:
-    bubble.loadBoardRelations();
+    // bubble.loadBoardRelations();
 
     //Read configuration from the config file and initializes everything according to that:
     readConfig();

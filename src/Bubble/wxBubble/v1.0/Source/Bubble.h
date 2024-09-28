@@ -1,11 +1,11 @@
 #ifndef Bubble__h
 #define Bubble__h
 
-#include "IBubbleFileIO.h"
 #include "BubbleCanvas.h"
 #include "BubbleProcess.h"
 #include "BubblePicker.h"
 #include "BubbleEditor.h"
+#include "BubbleBoardProperties.h"
 
 #include <wx/process.h>
 #include <wx/textfile.h>
@@ -29,8 +29,6 @@ WX_DECLARE_STRING_HASH_MAP(BubbleBlockInfo*, BlocksHash);
 
 //Files and pointers to their editor:
 WX_DECLARE_STRING_HASH_MAP(BubbleEditor*, FileEditorHash);
-
-wxColour string2color(const wxString &value);
 
 //##Puede que a esta clase le cambie el nombre, porque es más un intercambiador de información entre Bubble
 //y el frame (o quien herede de esta clase) que un verdadero Notifier. Cumple como notifier en una dirección
@@ -96,151 +94,6 @@ class BubbleEventHandler
 
         virtual void addBubbleFile(const wxString &fileName) = 0;
 };
-
-
-class Bubble;
-class BubbleBoardProperties
-{
-    public:
-        wxString name;
-        wxString path;
-        wxString imgMain;
-        wxString cpu;
-        wxString clockFreq;
-        wxString url0;
-        wxString url1;
-        wxString imgThumb;
-        wxString portType;
-        wxString lang;
-        wxString uploader;
-        wxString uploaderCmd0;
-        wxString corePath;
-        wxString driverPath;
-        wxString core;
-        wxString outputMainFileExtension;
-        bool resetBeforeBuild;
-        unsigned int bootBaudRate;
-        unsigned int bootFindPortTries;
-        unsigned int bootTimeOut;
-        bool useWrapper;
-        wxString headerFileExtension;
-        wxString codeFileExtension;
-        wxString includeCodePrefix;
-        wxString includeCodePostfix;
-        wxString includeCodeInstancePrefix;
-        wxString includeInitCode;
-        wxString includeFinalCode;
-        wxString includeBuildPrefix;
-        wxString includeBuildPostfix;
-        wxString initBoardHeader;
-        wxString initBoardPrefix;
-        wxString initBoardPostfix;
-        wxString commentBegin;
-        wxString commentEnd;
-        wxString includesCodeList;
-        wxString definesCodeList;
-        wxString instancesCodeList;
-        wxString instancesHeaderCodeList;
-        wxString initCode;
-        wxString finalCode;
-        wxString initBoardCode;
-        wxString includesBuildList;
-        wxString arduinoVersion; //This is specific to Arduino-compatible hardware, but needed by now.
-        wxString objectExtension;
-        wxString boardDefine;
-        wxString arduinoVariant;
-        wxString usbVid;
-        wxString usbPidBoot;
-        wxString usbPidApp;
-        wxString usbManufacturer;
-        wxString usbProduct;
-        wxArrayString relCommands;
-        wxArrayString fileExtensions;
-
-        int codeLexer;
-        wxColour codeOperatorColor;
-        wxColour codeStringColor;
-        wxColour codePreprocessorColor;
-        wxColour codeIdentifierColor;
-        wxColour codeNumberColor;
-        wxColour codeCharacterColor;
-        wxColour codeWordColor;
-        wxColour codeWord2Color;
-        wxColour codeCommentColor;
-        wxColour codeCommentLineColor;
-        wxColour codeCommentDocColor;
-        wxColour codeCommentDocKeywordColor;
-        wxColour codeCommentDocKeywordErrorColor;
-        bool codeOperatorBold;
-        bool codeStringBold;
-        bool codePreprocessorBold;
-        bool codeIdentifierBold;
-        bool codeNumberBold;
-        bool codeCharacterBold;
-        bool codeWordBold;
-        bool codeWord2Bold;
-        bool codeCommentBold;
-        bool codeCommentLineBold;
-        bool codeCommentDocBold;
-        bool codeCommentDocKeywordBold;
-        bool codeCommentDocKeywordErrorBold;
-        unsigned int codeTabWidth;
-        wxString codeKeywords0;
-        wxString codeKeywords1;
-
-        BubbleBoardProperties():    portType("serial"),
-                                    outputMainFileExtension("ino"), //##Arduino compatible file by default?
-                                    bootBaudRate(115200),
-                                    bootFindPortTries(5),
-                                    bootTimeOut(200),
-                                    codeLexer(3), //CPP syntax
-                                    codeTabWidth(4)
-        {}
-        //##Ver si se necesita constructor de copia por las dudas, al menos que no haga gran cosa...
-
-        virtual ~BubbleBoardProperties()
-        {
-        }
-
-        // inline void clearRelCommands() { return relCommands.Clear(); };
-        // inline unsigned int getRelCommandsCount() const { return relCommands.GetCount(); };
-        // inline void addRelCommand(const wxString& value)
-        // {
-        //     relCommands.Add(value);
-        // }
-        // inline const wxString getRelCommand(const unsigned int index) const
-        // {
-        //     if (index < relCommands.GetCount())
-        //         return relCommands[index];
-        //     return wxString("");
-        // }
-
-        // inline void clearFileExtensions() { return fileExtensions.Clear(); };
-        // inline unsigned int getFileExtensionsCount() const { return fileExtensions.GetCount(); };
-        // inline void addFileExtension(const wxString& value)
-        // {
-        //     fileExtensions.Add(value);
-        // }
-        // inline const wxString getFileExtension(const unsigned int index) const
-        // {
-        //     if (index < fileExtensions.GetCount())
-        //         return fileExtensions[index];
-        //     return wxString("");
-        // }
-
-        // inline void setCodeOperatorColor(const wxString& value) { codeOperatorColor = string2color(value); }
-        // inline void setCodeOperatorColor(const wxColour& value) { codeOperatorColor = value; }
-
-        inline void addCodeKeyWord(wxString& keywords, const wxString& value)
-        {
-            if (!keywords.Contains(value))
-                keywords += wxString(" ") + value;
-        }
-
-        void addCodeKeywords0(const wxString& value) { addCodeKeyWord(codeKeywords0, value); }
-        void addCodeKeywords1(const wxString& value) { addCodeKeyWord(codeKeywords1, value); }
-};
-
 
 //The BubbleXML class manages the language structure (blocks info, canvases info, etc.). It DOES NOT deals
 //with the load/save of programs, only with the structural things:
@@ -316,24 +169,24 @@ class BubbleXML
         bool blockIsValid(const wxString& name, const wxString& type) const;
 
         //Hardware:
-        BubbleBoardProperties *loadBoardProperties(const wxString &fullBoardFileName);
+        BubbleBoardProperties loadBoardProperties(const wxString &fullBoardFileName);
         //wxString parseCmd(const wxString &cmd);
         const wxArrayString loadExternalCommands(const wxString &section, const wxString &fullBoardFileName);
         const wxArrayString loadInternalCommands(const wxString &section, const wxString &fullBoardFileName);
         int loadHardwareTargets(BubbleHardwareManager *hardwareManager);
-        bool loadBoardInstancesFromXML(wxXmlNode *node, BubbleCanvasInfo *canvasInfo, BubbleBoardProperties *boardProperties);
-        bool loadRelData(const wxString &relFileName, BubbleBoardProperties *boardProperties);
-        int loadBoardRelations();
-        bool loadSyntaxFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties);
-        bool loadExamplesFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties);
-        bool loadFileExtensions(wxXmlNode *node, BubbleBoardProperties *boardProperties);
-        bool loadIncludePathsFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties, bool onlyBoard);
-        bool loadIncludeFilesFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties, bool onlyBoard);
-        bool loadDefinesFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties);
-        bool loadInstancesFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties);
-        bool loadInitBoardCodeFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties, bool onlyBoard);
-        bool loadInitCodeFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties);
-        bool loadFinalCodeFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties);
+        bool loadBoardInstancesFromXML(wxXmlNode *node, BubbleCanvasInfo *canvasInfo);
+        bool loadRelData(const wxString &relFileName, BubbleBoardProperties &boardProperties);
+        int loadBoardRelations(BubbleBoardProperties &boardProperties);
+        bool loadSyntaxFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties);
+        bool loadExamplesFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties);
+        bool loadFileExtensions(wxXmlNode *node, BubbleBoardProperties &boardProperties);
+        bool loadIncludePathsFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties, bool onlyBoard);
+        bool loadIncludeFilesFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties, bool onlyBoard);
+        bool loadDefinesFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties);
+        bool loadInstancesFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties);
+        bool loadInitBoardCodeFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties, bool onlyBoard);
+        bool loadInitCodeFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties);
+        bool loadFinalCodeFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties);
 
         //Canvas:
         BubbleCanvasInfo getCanvasInfo(bool mainCanvas);
@@ -484,9 +337,6 @@ class Bubble
         inline void setBlocksPath(const wxString& value) { blocksPath = value; }
         inline const wxString &getBlocksPath() const { return blocksPath; }
 
-        inline void setHost(const wxString& value) { host = value; }
-        inline const wxString &getHost() const { return host; }
-
         inline void setAppPath(const wxString& value) { appPath = value; }
         inline const wxString &getAppPath() const { return appPath; }
         inline void setThemePath(const wxString& value) { themePath = value; }
@@ -539,7 +389,7 @@ class Bubble
         wxString getOutputObjectsList(const wxString &fileExtension);
         bool setBoardName(const wxString& value, wxWindow *pickersParent);
         inline const wxString &getBoardName() const { return boardName; }
-        int loadBoardRelations();
+        // int loadBoardRelations();
 
         //Board drivers:
         bool winInstallINF(); //##Testing.

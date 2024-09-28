@@ -1,11 +1,15 @@
 //##Agregar licencia y avisos de copyright de terceros en TODOS LOS headers y cpp.
 
 #include "Bubble.h"
+#include "wx/gtk/colour.h"
 
 #include <wx/msgdlg.h> //##Debug, se va en release. Agregar compilación condicional.
 #include <wx/dir.h>
 #include <wx/filename.h>
 
+#include <unordered_map>
+#include <variant>
+#include <fmt/core.h>
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -577,7 +581,7 @@ wxSize BubbleXML::loadSizeFromXML(wxXmlNode *node, const wxString& fileName) con
     return result;
 }
 
-
+// TODO: remove this??? seems kinda redundant with already having string2color (and the Deserializer)
 //This reads the params R, G and B in a positional way (the names doesn't matter):
 wxColour BubbleXML::loadColourFromXML(wxXmlNode *node, const wxString& fileName) const
 {
@@ -635,6 +639,65 @@ wxColour BubbleXML::loadColourFromXML(wxXmlNode *node, const wxString& fileName)
 //    }
 //    return result;
 //}
+
+template <typename T>
+using TargetFields = std::variant<
+    bool T::*,
+    int T::*,
+    unsigned int T::*,
+    wxString T::*,
+    wxColor T::*
+>;
+
+template <typename T>
+class Deserializer {
+    const std::unordered_map<wxString, TargetFields<T>> tagToFields;
+
+    void deserialize(const wxString &content, wxString *target) const {
+        *target = content;
+    }
+    void deserialize(const wxString &content, int *target) const {
+        content.ToInt(target);
+    }
+    void deserialize(const wxString &content, unsigned int *target) const {
+        content.ToUInt(target);
+    }
+    void deserialize(const wxString &content, bool *target) const {
+        *target = content == "true";
+    }
+    void deserialize(const wxString &content, wxColor *target) const {
+        long    R = 0,
+                G = 0,
+                B = 0;
+        wxString tail = content;
+
+        tail.BeforeFirst(',').Trim().ToLong(&R);
+        tail = tail.AfterFirst(',');
+        tail.BeforeFirst(',').Trim().ToLong(&G);
+        tail = tail.AfterFirst(',');
+        tail.BeforeFirst(',').Trim().ToLong(&B);
+
+        *target = wxColor((unsigned char)R, (unsigned char)G, (unsigned char)B);
+    }
+
+public:
+
+    Deserializer<T>(std::unordered_map<wxString, TargetFields<T>> tagToFields)
+        : tagToFields(tagToFields) {}
+
+    void writeTo(wxXmlNode *node, T& target) const {
+        if (tagToFields.find(node->GetName()) == tagToFields.end()) {
+            fmt::println("Unexpected tag: {}", node->GetName().ToStdString());
+            return;
+        }
+
+        auto field = tagToFields.at(node->GetName());
+
+        std::visit([&] (auto field) {
+            deserialize(node->GetNodeContent(), &(target.*field));
+        }, field);
+    }
+};
 
 
 bool BubbleXML::loadBlockInfoPropertiesFromXML(wxXmlNode *node, BubbleBlockInfo *blockInfo)
@@ -1538,42 +1601,43 @@ int BubbleXML::loadBlocksInfo(wxWindow *pickersParent, bool showPickers) //##Hac
     return counter; //##
 }
 
-
-int BubbleXML::loadBoardRelations()
+// FIXME: uhhh do this when loading the board? instead of when the program is built
+int BubbleXML::loadBoardRelations(BubbleBoardProperties &boardProperties)
 {
     //wxMessageDialog dialog0(parent, wxString("Loading blocks..."), _("0")); //##Debug.
     //dialog0.ShowModal(); //##Debug.
     if (bubble == NULL)
         return -1;
-    if (bubble->getHardwareManager() == NULL)
-        return -1;
-    if (bubble->getHardwareManager()->getCurrentBoardProperties() == NULL)
-        return -1;
+    // if (bubble->getHardwareManager() == NULL)
+    //     return -1;
+    // if (bubble->getHardwareManager()->getCurrentBoardProperties() == NULL)
+    //     return -1;
 
-    wxDir dir(bubble->getHardwareManager()->getCurrentBoardProperties()->path + wxString("/rel"));
+    // TODO: i think path was set somewhere else
+    wxDir dir(boardProperties.path + wxString("/rel"));
     if ( !dir.IsOpened() )
         return -3;
 
-    bubble->getHardwareManager()->getCurrentBoardProperties()->relCommands.Clear();
-    bubble->setIncludesCodeList(bubble->getHardwareManager()->getCurrentBoardProperties()->includesCodeList);
-    bubble->setIncludesBuildList(bubble->getHardwareManager()->getCurrentBoardProperties()->includesBuildList);
-    bubble->setInitBoardCode(bubble->getHardwareManager()->getCurrentBoardProperties()->initBoardCode);
+    boardProperties.relCommands.Clear(); // FIXME: is it necessary?
+    bubble->setIncludesCodeList(boardProperties.includesCodeList);
+    bubble->setIncludesBuildList(boardProperties.includesBuildList);
+    bubble->setInitBoardCode(boardProperties.initBoardCode);
 
-    bubble->getHardwareManager()->getCurrentBoardProperties()->definesCodeList = "";
-    bubble->getHardwareManager()->getCurrentBoardProperties()->instancesCodeList = "";
-    bubble->getHardwareManager()->getCurrentBoardProperties()->instancesHeaderCodeList = "";
+    boardProperties.definesCodeList = "";
+    boardProperties.instancesCodeList = "";
+    boardProperties.instancesHeaderCodeList = "";
 
     wxString fileName;
     int counter = 0;
     bool result = dir.GetFirst(&fileName, wxEmptyString, wxDIR_DEFAULT);
     while (result)
     {
-        wxString fullRelFileName = bubble->getHardwareManager()->getCurrentBoardProperties()->path + wxString("/rel/") + fileName;
+        wxString fullRelFileName = boardProperties.path + wxString("/rel/") + fileName;
         //wxMessageDialog dialog2(bubble->getParent(), fullRelFileName, _("loadBoardRelations")); //##Debug
         //dialog2.ShowModal(); //##Debug
         if (wxFile::Exists(fullRelFileName) && (fullRelFileName.AfterLast('.') == "rel") )
         {
-            loadRelData(fullRelFileName, bubble->getHardwareManager()->getCurrentBoardProperties());
+            loadRelData(fullRelFileName, boardProperties);
         }
         counter++;
         result = dir.GetNext(&fileName);
@@ -1648,23 +1712,80 @@ bool BubbleXML::blockIsValid(const wxString& name, const wxString& type) const
 //    return result;
 //}
 
+#ifdef _WIN32
+#define HOST "win_i386"
+#else
+#define HOST "linux_amd64"
+#endif
 
-BubbleBoardProperties *BubbleXML::loadBoardProperties(const wxString &fullBoardFileName)
+BubbleBoardProperties BubbleXML::loadBoardProperties(const wxString &fullBoardFileName)
 {
+    static const Deserializer<BubbleBoardProperties> propertiesDeserializer ({
+        { "name",                       &BubbleBoardProperties::name },
+        { "portType",                   &BubbleBoardProperties::portType },
+        { "imgMain",                    &BubbleBoardProperties::imgMain },
+        { "cpu",                        &BubbleBoardProperties::cpu },
+        { "clockFreq",                  &BubbleBoardProperties::clockFreq },
+        { "url0",                       &BubbleBoardProperties::url0 },
+        { "url1",                       &BubbleBoardProperties::url1 },
+        { "imgThumb",                   &BubbleBoardProperties::imgThumb },
+        { "outputMainFileExtension",    &BubbleBoardProperties::outputMainFileExtension },
+        { "resetBeforeBuild",           &BubbleBoardProperties::resetBeforeBuild },
+        { "bootBaudRate",               &BubbleBoardProperties::bootBaudRate },
+        { "bootFindPortTries",          &BubbleBoardProperties::bootFindPortTries },
+        { "useWrapper",                 &BubbleBoardProperties::useWrapper },
+        { "bootTimeOut",                &BubbleBoardProperties::bootTimeOut },
+        { "headerFileExtension",        &BubbleBoardProperties::headerFileExtension },
+        { "codeFileExtension",          &BubbleBoardProperties::codeFileExtension },
+        { "includeCodePrefix",          &BubbleBoardProperties::includeCodePrefix },
+        { "includeCodePostfix",         &BubbleBoardProperties::includeCodePostfix },
+        { "includeCodeInstancePrefix",  &BubbleBoardProperties::includeCodeInstancePrefix },
+        { "includeInitCode",            &BubbleBoardProperties::includeInitCode },
+        { "includeFinalCode",           &BubbleBoardProperties::includeFinalCode },
+        { "includeBuildPrefix",         &BubbleBoardProperties::includeBuildPrefix },
+        { "includeBuildPostfix",        &BubbleBoardProperties::includeBuildPostfix },
+        { "initBoardHeader",            &BubbleBoardProperties::initBoardHeader },
+        { "initBoardPrefix",            &BubbleBoardProperties::initBoardPrefix },
+        { "initBoardPostfix",           &BubbleBoardProperties::initBoardPostfix },
+        { "commentBegin",               &BubbleBoardProperties::commentBegin },
+        { "commentEnd",                 &BubbleBoardProperties::commentEnd },
+        { "arduinoVersion",             &BubbleBoardProperties::arduinoVersion },
+        { "objectExtension",            &BubbleBoardProperties::objectExtension },
+        { "boardDefine",                &BubbleBoardProperties::boardDefine },
+        { "arduinoVariant",             &BubbleBoardProperties::arduinoVariant },
+        { "usbVid",                     &BubbleBoardProperties::usbVid },
+        { "usbPidBoot",                 &BubbleBoardProperties::usbPidBoot },
+        { "usbPidApp",                  &BubbleBoardProperties::usbPidApp },
+        { "usbManufacturer",            &BubbleBoardProperties::usbManufacturer },
+        { "usbProduct",                 &BubbleBoardProperties::usbProduct },
+
+        // Target OS specific fields:
+        { HOST "_lang", &BubbleBoardProperties::lang },
+        { HOST "_uploader", &BubbleBoardProperties::uploader },
+        { HOST "_uploaderCmd_0", &BubbleBoardProperties::uploaderCmd0 },
+        { HOST "_corePath", &BubbleBoardProperties::corePath },
+        { HOST "_core", &BubbleBoardProperties::core },
+        { HOST "_driverPath", &BubbleBoardProperties::driverPath },
+    });
+
+    BubbleBoardProperties boardInfo;
+
     if (bubble == NULL)
-        return NULL;
+        return boardInfo;
+
+
 
     //##Future: Try to disable the error messages that the wxXmlDocument class fires when encounters errors:
     wxXmlDocument boardFile;
     if ( !boardFile.Load(fullBoardFileName, wxString("UTF-8")) )
-        return NULL;
+        return boardInfo;
     wxXmlNode *root = boardFile.GetRoot();
     if (root == NULL)
-        return NULL;
+        return boardInfo;
     if (root->GetName() != wxString("board"))
-        return NULL;
+        return boardInfo;
 
-    BubbleBoardProperties *boardInfo = new BubbleBoardProperties();
+
     wxString tempName("");
     wxXmlNode *rootChild = root->GetChildren();
     while (rootChild)
@@ -1675,212 +1796,7 @@ BubbleBoardProperties *BubbleXML::loadBoardProperties(const wxString &fullBoardF
             wxXmlNode *child = rootChild->GetChildren();
             while (child)
             {
-                //##Debug:
-                //wxMessageDialog dialog0(bubble->getParent(), wxString("child = ") + child->GetNodeContent(), boardInfo->getName()); //##Debug.
-                //dialog0.ShowModal(); //##Debug.
-
-                if (child->GetName() == "name")
-                {
-                    boardInfo->name = child->GetNodeContent();
-                }
-                if (child->GetName() == "portType")
-                {
-                    boardInfo->portType = child->GetNodeContent();
-                    //##Debug:
-                    //wxMessageDialog dialog0(bubble->getParent(), wxString("portType = ") + child->GetNodeContent(), boardInfo->getName()); //##Debug.
-                    //dialog0.ShowModal(); //##Debug.
-                }
-                else if (child->GetName() == "imgMain")
-                {
-                    boardInfo->imgMain = child->GetNodeContent();
-                }
-                else if (child->GetName() == "cpu")
-                {
-                    boardInfo->cpu = child->GetNodeContent();
-                }
-                else if (child->GetName() == "clockFreq")
-                {
-                    boardInfo->clockFreq = child->GetNodeContent();
-                }
-
-                else if (child->GetName() == "url0")
-                {
-                    boardInfo->url0 = child->GetNodeContent();
-                }
-                else if (child->GetName() == "url1")
-                {
-                    boardInfo->url1 = child->GetNodeContent();
-                }
-                else if (child->GetName() == "imgThumb")
-                {
-                    boardInfo->imgThumb = child->GetNodeContent();
-                }
-                //The lang, corePath and core fields are filled with the host compatible language and core,
-                //where the host is detected by miniBloq at startup.
-                else if (child->GetName() == bubble->getHost() + wxString("_lang"))
-                {
-                    boardInfo->lang = child->GetNodeContent();
-                }
-                else if (child->GetName() == bubble->getHost() + wxString("_uploader"))
-                {
-                    boardInfo->uploader = child->GetNodeContent();
-                }
-                else if (child->GetName() == bubble->getHost() + wxString("_uploaderCmd_0"))
-                {
-                    boardInfo->uploaderCmd0 = child->GetNodeContent();
-                }
-                else if (child->GetName() == bubble->getHost() + wxString("_corePath"))
-                {
-                    boardInfo->corePath = child->GetNodeContent();
-
-                    //##Debug:
-//                    wxMessageDialog dialog0(bubble->getParent(), bubble->getHost() + wxString("_corePath"), boardInfo->getName() +
-//                                            wxString(": ") + boardInfo->getCorePath());
-//                    dialog0.ShowModal(); //##Debug.
-                }
-                else if (child->GetName() == bubble->getHost() + wxString("_core"))
-                {
-                    boardInfo->core = child->GetNodeContent();
-                }
-                else if (child->GetName() == bubble->getHost() + wxString("_driverPath"))
-                {
-                    boardInfo->driverPath = child->GetNodeContent();
-                    //##Debug:
-//                    wxMessageDialog dialog0(bubble->getParent(),
-//                                            boardInfo->getName() + wxString(": ") + child->GetNodeContent(), //boardInfo->getDriverPath(),
-//                                            bubble->getHost() + wxString("_driverPath")
-//                                           );
-//                    dialog0.ShowModal(); //##Debug.
-                }
-                else if (child->GetName() == "outputMainFileExtension")
-                {
-                    boardInfo->outputMainFileExtension = child->GetNodeContent();
-                }
-                else if (child->GetName() == "resetBeforeBuild")
-                {
-                    boardInfo->resetBeforeBuild = Bubble::string2bool(child->GetNodeContent());
-                }
-                else if (child->GetName() == "bootBaudRate")
-                {
-                    wxString returnStringValue = child->GetNodeContent();
-                    double returnNumericValue = 115200;
-                    if (returnStringValue.ToDouble(&returnNumericValue))
-                        boardInfo->bootBaudRate = (unsigned int)returnNumericValue;
-                }
-                else if (child->GetName() == "bootFindPortTries")
-                {
-                    wxString returnStringValue = child->GetNodeContent();
-                    double returnNumericValue = 5;
-                    if (returnStringValue.ToDouble(&returnNumericValue))
-                        boardInfo->bootFindPortTries = (unsigned int)returnNumericValue;
-                }
-                else if (child->GetName() == "useWrapper")
-                {
-                    boardInfo->useWrapper = Bubble::string2bool(child->GetNodeContent());
-                }
-                else if (child->GetName() == "bootTimeOut")
-                {
-                    wxString returnStringValue = child->GetNodeContent();
-                    double returnNumericValue = 200;
-                    if (returnStringValue.ToDouble(&returnNumericValue))
-                        boardInfo->bootTimeOut = (unsigned int)returnNumericValue;
-                }
-                else if (child->GetName() == "headerFileExtension")
-                {
-                    boardInfo->headerFileExtension = child->GetNodeContent();
-                }
-                else if (child->GetName() == "codeFileExtension")
-                {
-                    boardInfo->codeFileExtension = child->GetNodeContent();
-                }
-                else if (child->GetName() == "includeCodePrefix")
-                {
-                    boardInfo->includeCodePrefix = child->GetNodeContent();
-                }
-                else if (child->GetName() == "includeCodePostfix")
-                {
-                    boardInfo->includeCodePostfix = child->GetNodeContent();
-                }
-                else if (child->GetName() == "includeCodeInstancePrefix")
-                {
-                    boardInfo->includeCodeInstancePrefix = child->GetNodeContent();
-                }
-                else if (child->GetName() == "includeInitCode")
-                {
-                    boardInfo->includeInitCode = child->GetNodeContent();
-                }
-                else if (child->GetName() == "includeFinalCode")
-                {
-                    boardInfo->includeFinalCode = child->GetNodeContent();
-                }
-                else if (child->GetName() == "includeBuildPrefix")
-                {
-                    boardInfo->includeBuildPrefix = child->GetNodeContent();
-                }
-                else if (child->GetName() == "includeBuildPostfix")
-                {
-                    boardInfo->includeBuildPostfix = child->GetNodeContent();
-                }
-                else if (child->GetName() == "initBoardHeader")
-                {
-                    boardInfo->initBoardHeader = child->GetNodeContent();
-                }
-                else if (child->GetName() == "initBoardPrefix")
-                {
-                    boardInfo->initBoardPrefix = child->GetNodeContent();
-                }
-                else if (child->GetName() == "initBoardPostfix")
-                {
-                    boardInfo->initBoardPostfix = child->GetNodeContent();
-                }
-                else if (child->GetName() == "commentBegin")
-                {
-                    boardInfo->commentBegin = child->GetNodeContent();
-                }
-                else if (child->GetName() == "commentEnd")
-                {
-                    boardInfo->commentEnd = child->GetNodeContent();
-                }
-                else if (child->GetName() == "arduinoVersion")
-                {
-                    boardInfo->arduinoVersion = child->GetNodeContent();
-                }
-                else if (child->GetName() == "objectExtension")
-                {
-                    boardInfo->objectExtension = child->GetNodeContent();
-                }
-                else if (child->GetName() == "boardDefine")
-                {
-                    boardInfo->boardDefine = child->GetNodeContent();
-                }
-                else if (child->GetName() == "arduinoVariant")
-                {
-                    boardInfo->arduinoVariant = child->GetNodeContent();
-                    //##Debug:
-//                    wxMessageDialog dialog0(bubble->getParent(), boardInfo->getArduinoVariant(), boardInfo->getName()); //##Debug.
-//                    dialog0.ShowModal(); //##Debug.
-                }
-                else if (child->GetName() == "usbVid")
-                {
-                    boardInfo->usbVid = child->GetNodeContent();
-                }
-                else if (child->GetName() == "usbPidBoot")
-                {
-                    boardInfo->usbPidBoot = child->GetNodeContent();
-                }
-                else if (child->GetName() == "usbPidApp")
-                {
-                    boardInfo->usbPidApp = child->GetNodeContent();
-                }
-                else if (child->GetName() == "usbManufacturer")
-                {
-                    boardInfo->usbManufacturer = child->GetNodeContent();
-                }
-                else if (child->GetName() == "usbProduct")
-                {
-                    boardInfo->usbProduct = child->GetNodeContent();
-                }
-
+                propertiesDeserializer.writeTo(child, boardInfo);
                 child = child->GetNext();
             }
         }
@@ -2080,8 +1996,8 @@ int BubbleXML::loadHardwareTargets(BubbleHardwareManager *hardwareManager)
         wxString fullBoardFileName = bubble->getTargetsPath() + wxString("/") + fileName + wxString("/main.board");
         if (wxFile::Exists(fullBoardFileName))
         {
-            BubbleBoardProperties *boardProperties = loadBoardProperties(fullBoardFileName);
-            boardProperties->path = bubble->getTargetsPath() + wxString("/") + fileName; //##This should be done in loadBoardProperties().
+            BubbleBoardProperties boardProperties = loadBoardProperties(fullBoardFileName);
+            boardProperties.path = bubble->getTargetsPath() + wxString("/") + fileName; //##This should be done in loadBoardProperties().
             hardwareManager->addBoard(boardProperties);
             counter++;
         }
@@ -2094,11 +2010,8 @@ int BubbleXML::loadHardwareTargets(BubbleHardwareManager *hardwareManager)
 }
 
 
-bool BubbleXML::loadRelData(const wxString &relFileName, BubbleBoardProperties *boardProperties)
+bool BubbleXML::loadRelData(const wxString &relFileName, BubbleBoardProperties &boardProperties)
 {
-    if (boardProperties == NULL)
-        return false;
-
     wxFile relFile(relFileName, wxFile::read);
     if (relFile.Length() == 0) //If the file is empty, do nothing.
     {
@@ -2147,20 +2060,18 @@ bool BubbleXML::loadRelData(const wxString &relFileName, BubbleBoardProperties *
     unsigned int i = 0;
     while (i < commands.GetCount())
     {
-        boardProperties->relCommands.Add(commands[i]);
+        boardProperties.relCommands.Add(commands[i]);
         i++;
     }
     return true;
 }
 
 
-bool BubbleXML::loadInitBoardCodeFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties, bool onlyBoard)
+bool BubbleXML::loadInitBoardCodeFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties, bool onlyBoard)
 {
     if (bubble == NULL)
         return false;
     if (node == NULL)
-        return false;
-    if (boardProperties == NULL)
         return false;
 
     wxXmlNode *stringNode = node->GetChildren();
@@ -2178,7 +2089,7 @@ bool BubbleXML::loadInitBoardCodeFromXML(wxXmlNode *node, BubbleBoardProperties 
             if (onlyBoard)
             {
                 //Board:
-                boardProperties->initBoardCode += stringLine;
+                boardProperties.initBoardCode += stringLine;
             }
             {
                 //Relation:
@@ -2191,13 +2102,11 @@ bool BubbleXML::loadInitBoardCodeFromXML(wxXmlNode *node, BubbleBoardProperties 
 }
 
 
-bool BubbleXML::loadIncludePathsFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties, bool onlyBoard)
+bool BubbleXML::loadIncludePathsFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties, bool onlyBoard)
 {
     if (bubble == NULL)
         return false;
     if (node == NULL)
-        return false;
-    if (boardProperties == NULL)
         return false;
 
     wxXmlNode *includeNode = node->GetChildren();
@@ -2230,16 +2139,16 @@ bool BubbleXML::loadIncludePathsFromXML(wxXmlNode *node, BubbleBoardProperties *
         if (onlyBoard)
         {
             //Board:
-            boardProperties->includesBuildList += (
-                                         boardProperties->includeBuildPrefix + resultStr +
-                                         boardProperties->includeBuildPostfix
+            boardProperties.includesBuildList += (
+                                         boardProperties.includeBuildPrefix + resultStr +
+                                         boardProperties.includeBuildPostfix
                                         );
         }
         {
             //Relation:
             bubble->setIncludesBuildList(bubble->getIncludesBuildList() +
-                                         boardProperties->includeBuildPrefix + resultStr +
-                                         boardProperties->includeBuildPostfix
+                                         boardProperties.includeBuildPrefix + resultStr +
+                                         boardProperties.includeBuildPostfix
                                         );
         }
     }
@@ -2247,158 +2156,59 @@ bool BubbleXML::loadIncludePathsFromXML(wxXmlNode *node, BubbleBoardProperties *
 }
 
 
-bool BubbleXML::loadSyntaxFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties)
+bool BubbleXML::loadSyntaxFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties)
 {
+    static const Deserializer<BubbleBoardProperties> syntaxDeserializer ({
+        {"lexer",                       &BubbleBoardProperties::codeLexer },
+        {"operatorColor",               &BubbleBoardProperties::codeOperatorColor },
+        {"stringColor",                 &BubbleBoardProperties::codeStringColor },
+        {"preprocesorColor",            &BubbleBoardProperties::codePreprocessorColor },
+        {"identifierColor",             &BubbleBoardProperties::codeIdentifierColor },
+        {"numberColor",                 &BubbleBoardProperties::codeNumberColor },
+        {"characterColor",              &BubbleBoardProperties::codeCharacterColor },
+        {"wordColor",                   &BubbleBoardProperties::codeWordColor },
+        {"word2Color",                  &BubbleBoardProperties::codeWord2Color },
+        {"commentColor",                &BubbleBoardProperties::codeCommentColor },
+        {"commentLineColor",            &BubbleBoardProperties::codeCommentLineColor },
+        {"commentDocColor",             &BubbleBoardProperties::codeCommentDocColor },
+        {"commentDocKeywordColor",      &BubbleBoardProperties::codeCommentDocKeywordColor },
+        {"commentDocKeywordErrorColor", &BubbleBoardProperties::codeCommentDocKeywordErrorColor },
+        {"operatorBold",                &BubbleBoardProperties::codeOperatorBold },
+        {"stringBold",                  &BubbleBoardProperties::codeStringBold },
+        {"preprocesorBold",             &BubbleBoardProperties::codePreprocessorBold },
+        {"identifierBold",              &BubbleBoardProperties::codeIdentifierBold },
+        {"numberBold",                  &BubbleBoardProperties::codeNumberBold },
+        {"characterBold",               &BubbleBoardProperties::codeCharacterBold },
+        {"wordBold",                    &BubbleBoardProperties::codeWordBold },
+        {"word2Bold",                   &BubbleBoardProperties::codeWord2Bold },
+        {"commentBold",                 &BubbleBoardProperties::codeCommentBold },
+        {"commentLineBold",             &BubbleBoardProperties::codeCommentLineBold },
+        {"commentDocBold",              &BubbleBoardProperties::codeCommentDocBold },
+        {"commentDocKeywordBold",       &BubbleBoardProperties::codeCommentDocKeywordBold },
+        {"commentDocKeywordErrorBold",  &BubbleBoardProperties::codeCommentDocKeywordErrorBold },
+        {"tabWidth",                    &BubbleBoardProperties::codeTabWidth },
+    });
+
     if (bubble == NULL)
         return false;
     if (node == NULL)
-        return false;
-    if (boardProperties == NULL)
         return false;
 
     wxXmlNode *stringNode = node->GetChildren();
     while (stringNode)
     {
-        //Syntax lexer:
-        if (stringNode->GetName() == wxString("lexer"))
-        {
-            wxString returnStringValue = stringNode->GetNodeContent();
-            long returnNumericValue = 0;
-            if (returnStringValue.ToLong(&returnNumericValue))
-                boardProperties->codeLexer = (int)returnNumericValue;
-        }
-
-        //Font color:
-        else if (stringNode->GetName() == wxString("operatorColor"))
-        {
-            boardProperties->codeOperatorColor = stringNode->GetNodeContent();
-        }
-        else if (stringNode->GetName() == wxString("stringColor"))
-        {
-            boardProperties->codeStringColor = stringNode->GetNodeContent();
-        }
-        else if (stringNode->GetName() == wxString("preprocesorColor"))
-        {
-            boardProperties->codePreprocessorColor = stringNode->GetNodeContent();
-        }
-        else if (stringNode->GetName() == wxString("identifierColor"))
-        {
-            boardProperties->codeIdentifierColor = stringNode->GetNodeContent();
-        }
-        else if (stringNode->GetName() == wxString("numberColor"))
-        {
-            boardProperties->codeNumberColor = stringNode->GetNodeContent();
-        }
-        else if (stringNode->GetName() == wxString("characterColor"))
-        {
-            boardProperties->codeCharacterColor = stringNode->GetNodeContent();
-        }
-        else if (stringNode->GetName() == wxString("wordColor"))
-        {
-//            wxMessageDialog dialog0(bubble->getParent(), _(""), stringNode->GetNodeContent()); //##Debug
-//            dialog0.ShowModal(); //##Debug
-            boardProperties->codeWordColor = stringNode->GetNodeContent();
-        }
-        else if (stringNode->GetName() == wxString("word2Color"))
-        {
-            boardProperties->codeWord2Color = stringNode->GetNodeContent();
-        }
-        else if (stringNode->GetName() == wxString("commentColor"))
-        {
-            boardProperties->codeCommentColor = stringNode->GetNodeContent();
-        }
-        else if (stringNode->GetName() == wxString("commentLineColor"))
-        {
-            boardProperties->codeCommentLineColor = stringNode->GetNodeContent();
-        }
-        else if (stringNode->GetName() == wxString("commentDocColor"))
-        {
-            boardProperties->codeCommentDocColor = stringNode->GetNodeContent();
-        }
-        else if (stringNode->GetName() == wxString("commentDocKeywordColor"))
-        {
-            boardProperties->codeCommentDocKeywordColor = stringNode->GetNodeContent();
-        }
-        else if (stringNode->GetName() == wxString("commentDocKeywordErrorColor"))
-        {
-            boardProperties->codeCommentDocKeywordErrorColor = stringNode->GetNodeContent();
-        }
-
-        //Bold fonts:
-        else if (stringNode->GetName() == wxString("operatorBold"))
-        {
-            boardProperties->codeOperatorBold = Bubble::string2bool(stringNode->GetNodeContent());
-        }
-        else if (stringNode->GetName() == wxString("stringBold"))
-        {
-            boardProperties->codeStringBold = Bubble::string2bool(stringNode->GetNodeContent());
-        }
-        else if (stringNode->GetName() == wxString("preprocesorBold"))
-        {
-            boardProperties->codePreprocessorBold = Bubble::string2bool(stringNode->GetNodeContent());
-        }
-        else if (stringNode->GetName() == wxString("identifierBold"))
-        {
-            boardProperties->codeIdentifierBold = Bubble::string2bool(stringNode->GetNodeContent());
-        }
-        else if (stringNode->GetName() == wxString("numberBold"))
-        {
-            boardProperties->codeNumberBold = Bubble::string2bool(stringNode->GetNodeContent());
-        }
-        else if (stringNode->GetName() == wxString("characterBold"))
-        {
-            boardProperties->codeCharacterBold = Bubble::string2bool(stringNode->GetNodeContent());
-        }
-        else if (stringNode->GetName() == wxString("wordBold"))
-        {
-            boardProperties->codeWordBold = Bubble::string2bool(stringNode->GetNodeContent());
-        }
-        else if (stringNode->GetName() == wxString("word2Bold"))
-        {
-            boardProperties->codeWord2Bold = Bubble::string2bool(stringNode->GetNodeContent());
-        }
-        else if (stringNode->GetName() == wxString("commentBold"))
-        {
-            boardProperties->codeCommentBold = Bubble::string2bool(stringNode->GetNodeContent());
-        }
-        else if (stringNode->GetName() == wxString("commentLineBold"))
-        {
-            boardProperties->codeCommentLineBold = Bubble::string2bool(stringNode->GetNodeContent());
-        }
-        else if (stringNode->GetName() == wxString("commentDocBold"))
-        {
-            boardProperties->codeCommentDocBold = Bubble::string2bool(stringNode->GetNodeContent());
-        }
-        else if (stringNode->GetName() == wxString("commentDocKeywordBold"))
-        {
-            boardProperties->codeCommentDocKeywordBold = Bubble::string2bool(stringNode->GetNodeContent());
-        }
-        else if (stringNode->GetName() == wxString("commentDocKeywordErrorBold"))
-        {
-            boardProperties->codeCommentDocKeywordErrorBold = Bubble::string2bool(stringNode->GetNodeContent());
-        }
-
-        else if (stringNode->GetName() == wxString("tabWidth"))
-        {
-            wxString returnStringValue = stringNode->GetNodeContent();
-            long returnNumericValue = 0;
-            if (returnStringValue.ToLong(&returnNumericValue))
-                boardProperties->codeTabWidth = (int)returnNumericValue;
-        }
-
+        syntaxDeserializer.writeTo(stringNode, boardProperties);
         stringNode = stringNode->GetNext();
     }
     return true;
 }
 
 
-bool BubbleXML::loadExamplesFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties)
+bool BubbleXML::loadExamplesFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties)
 {
     if (bubble == NULL)
         return false;
     if (node == NULL)
-        return false;
-    if (boardProperties == NULL)
         return false;
 
     //##Implement.
@@ -2407,17 +2217,15 @@ bool BubbleXML::loadExamplesFromXML(wxXmlNode *node, BubbleBoardProperties *boar
 }
 
 
-bool BubbleXML::loadFileExtensions(wxXmlNode *node, BubbleBoardProperties *boardProperties)
+bool BubbleXML::loadFileExtensions(wxXmlNode *node, BubbleBoardProperties &boardProperties)
 {
     if (node == NULL)
-        return false;
-    if (boardProperties == NULL)
         return false;
 
     wxXmlNode *iteratorNode = node->GetChildren();
     while (iteratorNode)
     {
-        boardProperties->fileExtensions.Add(iteratorNode->GetName());
+        boardProperties.fileExtensions.Add(iteratorNode->GetName());
         iteratorNode = iteratorNode->GetNext();
 
         //wxMessageDialog dialog0(bubble->getParent(), wxString("") << boardProperties->getFileExtensionsCount(), _("extension")); //##Debug
@@ -2427,13 +2235,11 @@ bool BubbleXML::loadFileExtensions(wxXmlNode *node, BubbleBoardProperties *board
 }
 
 
-bool BubbleXML::loadIncludeFilesFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties, bool onlyBoard)
+bool BubbleXML::loadIncludeFilesFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties, bool onlyBoard)
 {
     if (bubble == NULL)
         return false;
     if (node == NULL)
-        return false;
-    if (boardProperties == NULL)
         return false;
 
     wxXmlNode *includeNode = node->GetChildren();
@@ -2465,16 +2271,16 @@ bool BubbleXML::loadIncludeFilesFromXML(wxXmlNode *node, BubbleBoardProperties *
         if (onlyBoard)
         {
             //Board:
-            boardProperties->includesCodeList += (
-                                                    boardProperties->includeCodePrefix + resultStr +
-                                                    boardProperties->includeCodePostfix + wxString("\r\n")
+            boardProperties.includesCodeList += (
+                                                    boardProperties.includeCodePrefix + resultStr +
+                                                    boardProperties.includeCodePostfix + wxString("\r\n")
                                                 );
         }
         {
             //Relation:
             bubble->setIncludesCodeList(bubble->getIncludesCodeList() +
-                                        boardProperties->includeCodePrefix + resultStr +
-                                        boardProperties->includeCodePostfix + wxString("\r\n")
+                                        boardProperties.includeCodePrefix + resultStr +
+                                        boardProperties.includeCodePostfix + wxString("\r\n")
                                        );
         }
     }
@@ -2482,13 +2288,11 @@ bool BubbleXML::loadIncludeFilesFromXML(wxXmlNode *node, BubbleBoardProperties *
 }
 
 
-bool BubbleXML::loadDefinesFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties)
+bool BubbleXML::loadDefinesFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties)
 {
     if (bubble == NULL)
         return false;
     if (node == NULL)
-        return false;
-    if (boardProperties == NULL)
         return false;
 
     wxString resultStr("");
@@ -2498,7 +2302,7 @@ bool BubbleXML::loadDefinesFromXML(wxXmlNode *node, BubbleBoardProperties *board
         if (stringNode->GetName() == wxString("s"))
         {
             resultStr = stringNode->GetNodeContent() + wxString("\r\n") ;
-            boardProperties->definesCodeList += resultStr;
+            boardProperties.definesCodeList += resultStr;
         }
         stringNode = stringNode->GetNext();
     }
@@ -2506,13 +2310,11 @@ bool BubbleXML::loadDefinesFromXML(wxXmlNode *node, BubbleBoardProperties *board
 }
 
 
-bool BubbleXML::loadInstancesFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties)
+bool BubbleXML::loadInstancesFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties)
 {
     if (bubble == NULL)
         return false;
     if (node == NULL)
-        return false;
-    if (boardProperties == NULL)
         return false;
 
     wxString resultStr("");
@@ -2524,13 +2326,12 @@ bool BubbleXML::loadInstancesFromXML(wxXmlNode *node, BubbleBoardProperties *boa
             resultStr = stringNode->GetNodeContent() + wxString("\r\n") ;
             if (node->GetName() == wxString("instancesHeader"))
             {
-                boardProperties->instancesHeaderCodeList = (boardProperties->instancesHeaderCodeList +
-                                                            boardProperties->includeCodeInstancePrefix +
+                boardProperties.instancesHeaderCodeList += (boardProperties.includeCodeInstancePrefix +
                                                             resultStr);
             }
             else if (node->GetName() == wxString("instancesCode"))
             {
-                boardProperties->instancesCodeList += resultStr;
+                boardProperties.instancesCodeList += resultStr;
             }
         }
         stringNode = stringNode->GetNext();
@@ -2539,13 +2340,11 @@ bool BubbleXML::loadInstancesFromXML(wxXmlNode *node, BubbleBoardProperties *boa
 }
 
 
-bool BubbleXML::loadInitCodeFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties)
+bool BubbleXML::loadInitCodeFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties)
 {
     if (bubble == NULL)
         return false;
     if (node == NULL)
-        return false;
-    if (boardProperties == NULL)
         return false;
 
     wxXmlNode *stringNode = node->GetChildren();
@@ -2559,7 +2358,7 @@ bool BubbleXML::loadInitCodeFromXML(wxXmlNode *node, BubbleBoardProperties *boar
             if (isXMLVariable(stringLine))
                 stringLine = getVariableValue(stringLine, wxString(""));
 
-            boardProperties->initCode = boardProperties->initCode + stringLine;
+            boardProperties.initCode += stringLine;
         }
         stringNode = stringNode->GetNext();
     }
@@ -2567,13 +2366,11 @@ bool BubbleXML::loadInitCodeFromXML(wxXmlNode *node, BubbleBoardProperties *boar
 }
 
 
-bool BubbleXML::loadFinalCodeFromXML(wxXmlNode *node, BubbleBoardProperties *boardProperties)
+bool BubbleXML::loadFinalCodeFromXML(wxXmlNode *node, BubbleBoardProperties &boardProperties)
 {
     if (bubble == NULL)
         return false;
     if (node == NULL)
-        return false;
-    if (boardProperties == NULL)
         return false;
 
     wxString resultStr("");
@@ -2583,7 +2380,7 @@ bool BubbleXML::loadFinalCodeFromXML(wxXmlNode *node, BubbleBoardProperties *boa
         if (stringNode->GetName() == wxString("s"))
         {
             resultStr = stringNode->GetNodeContent();// + wxString("\r\n") ;
-            boardProperties->finalCode += resultStr;
+            boardProperties.finalCode += resultStr;
         }
         stringNode = stringNode->GetNext();
     }
@@ -2591,13 +2388,11 @@ bool BubbleXML::loadFinalCodeFromXML(wxXmlNode *node, BubbleBoardProperties *boa
 }
 
 
-bool BubbleXML::loadBoardInstancesFromXML(wxXmlNode *node, BubbleCanvasInfo *canvasInfo, BubbleBoardProperties *boardProperties)
+bool BubbleXML::loadBoardInstancesFromXML(wxXmlNode *node, BubbleCanvasInfo *canvasInfo)
 {
     if (node == NULL)
         return false;
     if (canvasInfo == NULL)
-        return false;
-    if (boardProperties == NULL)
         return false;
 
     wxXmlNode *child = node->GetChildren();
@@ -2609,7 +2404,9 @@ bool BubbleXML::loadBoardInstancesFromXML(wxXmlNode *node, BubbleCanvasInfo *can
         if (newInstance)
         {
             canvasInfo->setInstance(newInstance);
-            boardProperties->addCodeKeywords1(child->GetName());
+
+            // TODO: no idea what was this supposed to do
+            // boardProperties->addCodeKeywords1(child->GetName());
         }
 
         child = child->GetNext();
@@ -2670,7 +2467,7 @@ BubbleCanvasInfo BubbleXML::getCanvasInfo(bool mainCanvas)
             tempName = rootChild->GetName();
             if (tempName == wxString("instances"))
             {
-                loadBoardInstancesFromXML(rootChild, &info, bubble->getHardwareManager()->getCurrentBoardProperties());
+                loadBoardInstancesFromXML(rootChild, &info);
             }
             rootChild = rootChild->GetNext();
         }
@@ -2702,7 +2499,7 @@ BubbleCanvasInfo BubbleXML::getCanvasInfo(bool mainCanvas)
                             {
                                 tempName = rootChild->GetName();
                                 if (tempName == wxString("instances"))
-                                    loadBoardInstancesFromXML(rootChild, &info, bubble->getHardwareManager()->getCurrentBoardProperties());
+                                    loadBoardInstancesFromXML(rootChild, &info);
                                 rootChild = rootChild->GetNext();
                             }
                         }

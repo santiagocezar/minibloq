@@ -32,29 +32,6 @@
 #include <wx/listimpl.cpp>
 WX_DEFINE_LIST(listOfCanvas);
 
-
-//value format must be:
-//R,G,B (example: 255,0,0
-//Values are in decimal base and spaces, tabs, etc. are trimmed.
-wxColour string2color(const wxString &value)
-{
-    long    R = 0,
-            G = 0,
-            B = 0;
-    wxString tail = value;
-
-    tail.BeforeFirst(',').Trim().ToLong(&R);
-    tail = tail.AfterFirst(',');
-    tail.BeforeFirst(',').Trim().ToLong(&G);
-    tail = tail.AfterFirst(',');
-    tail.BeforeFirst(',').Trim().ToLong(&B);
-
-    wxColour result((unsigned char)R, (unsigned char)G, (unsigned char)B);
-
-    return result;
-}
-
-
 //##Ver cómo agregar chequeo de que si no setean el parent y el notifier, TODO MAL!
 /*
 Bubble::Bubble(IBubbleNotifier *notifier) : parent(NULL),
@@ -380,13 +357,16 @@ bool Bubble::addBlockToPicker(BubbleBlockInfo *block, wxWindow *pickersParent)
     }
 
     //Add the blocks' keywords to the current board properties:
-    if (getHardwareManager() == NULL)
-        return true;
-    if (getHardwareManager()->getCurrentBoardProperties() == NULL)
-        return true;
+    // NOTE: actually, nope. boardProperties should remain constant.
+    // NOTE: don't really care for this feature (code view) anyways.
 
-    getHardwareManager()->getCurrentBoardProperties()->addCodeKeywords0(block->getKeywords0());
-    getHardwareManager()->getCurrentBoardProperties()->addCodeKeywords1(block->getKeywords1());
+    // if (getHardwareManager() == NULL)
+        // return true;
+    // if (getHardwareManager()->getCurrentBoardProperties() == NULL)
+        // return true;
+
+    // getHardwareManager()->getCurrentBoardProperties()->addCodeKeywords0(block->getKeywords0());
+    // getHardwareManager()->getCurrentBoardProperties()->addCodeKeywords1(block->getKeywords1());
 
 //    wxMessageDialog dialog0(parent, getHardwareManager()->getCurrentBoardProperties()->getCodeKeywords0(), _("keywords0:")); //##Debug.
 //    dialog0.ShowModal(); //##Debug.
@@ -586,16 +566,17 @@ bool Bubble::isFileAdded(const wxString& fullFileName) const
 }
 
 
-int Bubble::loadBoardRelations()
-{
-    int result = bubbleXML.loadBoardRelations();
-    if ( getNotifier() )
-    {
-        updateCode();
-        getNotifier()->refreshGeneratedCodeNotify();
-    }
-    return result;
-}
+// int Bubble::loadBoardRelations()
+// {
+    // int result = bubbleXML.loadBoardRelations();
+    // if ( getNotifier() )
+    // {
+    //     updateCode();
+    //     getNotifier()->refreshGeneratedCodeNotify();
+    // }
+    // return result;
+//     return 0;
+// }
 
 
 BubbleBlockInfo Bubble::loadBlockFromXML(wxXmlNode *child)
@@ -1405,7 +1386,7 @@ bool Bubble::build()
     if (getNotifier() == NULL)
         return false;
 
-    loadBoardRelations();
+    // loadBoardRelations(); TODO: is it ok to skip this
     if (generateCodeAndSaveToFile())
     {
         //Profiling:
